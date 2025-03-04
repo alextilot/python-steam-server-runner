@@ -1,0 +1,11 @@
+# Steam Game Server
+
+This is a steam game server runner. It will be built around Palworld.
+The goal of this is to have a self managing server for update's, reboots and restarts.
+
+## Requirements
+
+- Scheduled updates.
+- Scheduled restarts.
+- Restarts on server crashes.
+- Restarts on system boot. (Handles power outages)
