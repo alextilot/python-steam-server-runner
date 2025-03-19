@@ -1,4 +1,5 @@
 import logging
+from typing import Callable
 
 import psutil
 
@@ -13,9 +14,12 @@ def get_memory_usage_percent() -> float:
 
 
 class System:
+    def __init__(self, max_memory_usage: float, get_current_memory_usage: Callable[[], float]):
+        self.max_memory_usage = max_memory_usage;
+        self.get_current_memory_usage = get_current_memory_usage;
     def is_out_of_memory(self):
-        percent = get_memory_usage_percent()
+        current_memory_usage = self.get_current_memory_usage();
         log.debug(
-            f"Memory usage 'current: {percent}% threshold: {SYSTEM_MEMORY_THRESHOLD}%'"
+            f"Memory usage 'current: {current_memory_usage}% threshold: {self.max_memory_usage}%'"
         )
-        return percent >= SYSTEM_MEMORY_THRESHOLD
+        return current_memory_usage >= self.max_memory_usage 

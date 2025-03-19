@@ -3,21 +3,15 @@ import threading
 import time
 
 import schedule
-from actions import (
-    ActionFreshStart,
-    ActionOutOfMemory,
-    ActionRestart,
-    ActionStart,
-    ActionType,
-    ActionUpdate,
-)
 from commandline import CommandLine
+from jobs import Job
+from server_action import ServerAction
 from state_checker import StateChecker
 from steam.palworld_api import PalWorldAPI
 from steam.steam_game import SteamGame
-from tasks import TaskFactory, TaskRegistry
+from tasks import TaskFactory
 from utils.cascading_queue import CascadingQueue
-from utils.system import System
+from utils.system import SYSTEM_MEMORY_THRESHOLD, System, get_memory_usage_percent
 
 # Get the logger you want to disable (e.g., 'schedule' logger)
 logger_to_disable = logging.getLogger("schedule")
@@ -40,20 +34,32 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 
+def producer_thread():
+    def producer():
+        while True:
+            try:
+                schedule.run_pending()
+                time.sleep(1)
+            except Exception as e:
+                log.error(f"Error during schedule loop: {e}")
+
+    return producer
+
+
 def consumer_thread(queue: CascadingQueue):
     def consumer():
         while True:
             try:
-                task = queue.get()
-                if task is None:  # Sentinel value
+                item = queue.get()
+                if item is None:  # Sentinel value
                     queue.task_done()
                     log.debug("Sentinel value found... exiting")
                     break
-                log.info(f"running: {task}")
-                task.run()
+                log.info(f"running: {item}")
+                item.run()
                 queue.task_done()
-                log.info(f"completed: {task}")
-                queue.remove_lower_priority(task)
+                log.info(f"completed: {item}")
+                queue.remove_lower_priority(item)
                 time.sleep(1)
             except Exception as e:
                 log.error(f"Error during event loop: {e}")
@@ -67,50 +73,13 @@ def conditional(condition_func, action_func, *args, **kwargs):
     return None
 
 
-def producer_thread(queue: CascadingQueue, check: StateChecker, tasks: TaskRegistry):
-    schedule.every().minutes.at(":00").do(
-        conditional, check.is_game_stopped, queue.enqueue, tasks.get(ActionType.START)
-    )
-
-    for minute in [":00", ":10", ":20", ":30", ":40", ":50"]:
-        schedule.every().hour.at(minute).do(
-            conditional,
-            check.has_memory_leak,
-            queue.enqueue,
-            tasks.get(ActionType.OUT_OF_MEMORY),
-        )
-
-    for minute in [":00", ":15", ":30", ":45"]:
-        schedule.every().hour.at(minute).do(
-            conditional,
-            check.is_update_available,
-            queue.enqueue,
-            tasks.get(ActionType.UPDATE),
-        )
-
-    schedule.every().day.at("05:45").do(
-        conditional,
-        check.is_game_running,
-        queue.enqueue,
-        tasks.get(ActionType.RESTART),
-    )
-
-    def producer():
-        while True:
-            try:
-                schedule.run_pending()
-                time.sleep(1)
-            except Exception as e:
-                log.error(f"Error during schedule loop: {e}")
-
-    return producer
-
-
 def main():
     command_line = CommandLine()
     queue = CascadingQueue()
 
     args = command_line.parse_start_args()
+
+    system = System(SYSTEM_MEMORY_THRESHOLD, get_memory_usage_percent)
 
     steamgame = SteamGame(
         args["steam_path"], args["app_id"], args["game_name"], args["game_args"]
@@ -120,32 +89,63 @@ def main():
         args["username"],
         args["password"],
     )
-    system = System()
 
     checker = StateChecker(palworld_api, steamgame, system)
 
-    task_registery = TaskRegistry()
-    task_factory = TaskFactory(task_registery)
+    action = ServerAction(palworld_api, steamgame)
+    task = TaskFactory(action)
 
-    task_factory.create(
-        5, ActionType.FRESH_START, ActionFreshStart(palworld_api, steamgame, 0)
+    job_fresh_start = Job(1, "Fresh start")
+    job_fresh_start.add(task.update())
+    job_fresh_start.add(task.start())
+
+    job_start = Job(2, "Game start")
+    job_start.add(task.start())
+
+    job_restart = Job(3, "Game restart")
+    job_restart.add(task.countdown(job_restart.name, 15))
+    job_restart.add(task.stop())
+    job_restart.add(task.start())
+
+    job_out_of_memory = Job(4, "System out of memory")
+    job_out_of_memory.add(task.countdown(job_out_of_memory.name, 5))
+    job_out_of_memory.add(task.stop())
+    job_out_of_memory.add(task.start())
+
+    job_update = Job(5, "Game update")
+    job_update.add(task.countdown(job_update.name, 15))
+    job_update.add(task.stop())
+    job_update.add(task.update())
+    job_update.add(task.start())
+
+    job_stop = Job(6, "Game stop")
+    job_stop.add(task.stop())
+
+    schedule.every().minutes.at(":00").do(
+        conditional, checker.is_game_stopped, queue.enqueue, job_start
     )
-    task_factory.create(4, ActionType.START, ActionStart(palworld_api, steamgame, 0))
-    task_factory.create(
-        3, ActionType.RESTART, ActionRestart(palworld_api, steamgame, 15)
+
+    for minute in [":00", ":10", ":20", ":30", ":40", ":50"]:
+        schedule.every().hour.at(minute).do(
+            conditional, checker.has_memory_leak, queue.enqueue, job_out_of_memory
+        )
+
+    for minute in [":00", ":15", ":30", ":45"]:
+        schedule.every().hour.at(minute).do(
+            conditional, checker.is_update_available, queue.enqueue, job_update
+        )
+
+    schedule.every().day.at("05:45").do(
+        conditional, checker.is_game_running, queue.enqueue, job_restart
     )
-    task_factory.create(
-        4, ActionType.OUT_OF_MEMORY, ActionOutOfMemory(palworld_api, steamgame, 5)
-    )
-    task_factory.create(5, ActionType.UPDATE, ActionUpdate(palworld_api, steamgame, 5))
 
     event_thread = threading.Thread(
         name="EventThread", target=consumer_thread(queue), daemon=True
     )
 
-    scheduler_thread = threading.Thread(
-        name="ScheudlerThread",
-        target=producer_thread(queue, checker, task_registery),
+    schedule_thread = threading.Thread(
+        name="ScheudleThread",
+        target=producer_thread(),
         daemon=True,
     )
 
@@ -153,8 +153,8 @@ def main():
 
     try:
         event_thread.start()
-        scheduler_thread.start()
-        queue.enqueue(task_registery.get(ActionType.FRESH_START))
+        schedule_thread.start()
+        queue.enqueue(job_fresh_start)
         while True:
             time.sleep(1)
             output, err = command_line.parse_command(palworld_api.call)
@@ -166,7 +166,7 @@ def main():
         log.error(f"Error parsing command: {e}")
     finally:
         steamgame.stop()
-        scheduler_thread.join()
+        schedule_thread.join()
         queue.enqueue(None)
         event_thread.join()
 
