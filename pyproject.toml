@@ -77,24 +77,87 @@ path = ".venv"
 [tool.hatch.version]
 path = "steam_server_runner/__init__.py"
 
-[tool.mypy]
-files = ["**/*.py"]
-show_error_codes = true
-strict = true
-
 [tool.pytest.ini_options]
 addopts = "-q"
 minversion = "6.0"
 testpaths = ["tests"]
 
 [tool.ruff]
-src = ["steam_server_runner", "tests"]
+# Set the maximum line length to 88 (Black's default)
+line-length = 88
 
-[tool.ruff.format]
-docstring-code-format = true
+# Enable automatic fixing of fixable violations
+fix = true
+
+# Target Python 3.11+ syntax (recommended for 2025)
+# Options: py38, py39, py310, py311, py312, py313
+target-version = "py311"
 
 [tool.ruff.lint]
-extend-select = ["I"]
+# Enable comprehensive rule sets
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings  
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+    "S",    # flake8-bandit (security)
+    "T20",  # flake8-print
+    "SIM",  # flake8-simplify
+    "N",    # pep8-naming
+]
 
+# Never ignore these critical errors
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "S101",  # Use of assert (acceptable in tests)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Allow print statements in scripts
+"scripts/*" = ["T20"]
+# Allow assert statements in tests  
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Ensure imports are properly sorted
 [tool.ruff.lint.isort]
-known-first-party = ["steam_server_runner", "tests"]
+# TODO: Replace "your_package_name" with the actual name of your package in the following section.
+known-first-party = ["your_package_name"]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = [
+    "**/__pycache__",           # Python bytecode cache
+    "**/.git",                  # Git repository data
+    "**/.venv",                 # Virtual environment (venv)
+    "**/.env",                  # Virtual environment (.env)
+    "**/venv",                  # Virtual environment (venv)
+    "**/env",                   # Virtual environment (env)
+    "build",                    # Python package build directory
+    "dist",                     # Python package distribution directory
+    ".pytest_cache",            # pytest cache directory
+    ".mypy_cache",              # mypy cache directory
+    ".ruff_cache",              # Ruff cache directory
+    ".coverage",                # Coverage data file
+    ".DS_Store"                 # macOS system files
+]
+
+# Basic configuration
+typeCheckingMode = "strict"
+pythonVersion = "3.11"                 # Match Ruff 
+pythonPlatform = "All"
+
+
+# Additional strict checks beyond default strict mode
+reportMissingTypeStubs = false         # Avoid noise from third-party libraries
+reportUnknownMemberType = false        # Avoid noise from third-party libraries
+reportUntypedBaseClass = true          # Requires type annotations on base classes
+reportUntypedClassDecorator = true     # Requires type annotations on class decorators
+reportPrivateUsage = true              # Prevents access to private members from outside class
+reportConstantRedefinition = true      # Prevents redefinition of Final variables
