@@ -12,18 +12,18 @@ class Task:
     def __init__(self, server_action: ServerAction):
         self.server = server_action
 
-    def run(self):
+    def do(self):
         raise NotImplementedError
 
 
 class TaskStart(Task):
-    def run(self):
+    def do(self):
         if not self.server.is_running():
             self.server.start()
 
 
 class TaskStop(Task):
-    def run(self):
+    def do(self):
         self.server.save()
         self.server.shutdown("Shuting down ...", 5)
 
@@ -37,7 +37,7 @@ class TaskStop(Task):
 
 
 class TaskUpdate(Task):
-    def run(self):
+    def do(self):
         self.server.update()
 
 
@@ -45,11 +45,12 @@ class TaskCountdown(Task):
     def __init__(self, server_action: ServerAction, title: str, delay_minutes=0):
         super().__init__(server_action)
         self.title = title
-        self.delay_minutes = delay_minutes
-        self.delay_seconds = 0
         if delay_minutes > 0:
             self.delay_minutes = delay_minutes - 1
             self.delay_seconds = SECONDS_IN_A_MINUTE
+        else:
+            self.delay_minutes = delay_minutes
+            self.delay_seconds = 0
 
     def format(self, minutes: int, seconds: int) -> tuple[int, str]:
         remainder = seconds // SECONDS_IN_A_MINUTE
@@ -58,7 +59,7 @@ class TaskCountdown(Task):
             return total_minutes, "minutes"
         return seconds, "seconds"
 
-    def run(self):
+    def do(self):
         minutes = self.delay_minutes
         seconds = self.delay_seconds
         # Countdown every minute.

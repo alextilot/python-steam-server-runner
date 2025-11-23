@@ -7,7 +7,7 @@ from utils.system import System
 log = logging.getLogger(__name__)
 
 
-class StateChecker:
+class Status:
     def __init__(
         self,
         server_api: PalWorldAPI,
