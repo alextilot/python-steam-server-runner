@@ -117,6 +117,10 @@ typeCheckingMode = "strict"
 pythonVersion = "3.13"                 # Match Ruff 
 pythonPlatform = "All"
 
+# Specify the virtual environment path
+venvPath = "~/.pyenv/versions"
+venv = "server-runner"
+
 
 # Additional strict checks beyond default strict mode
 reportMissingTypeStubs = false         # Avoid noise from third-party libraries
