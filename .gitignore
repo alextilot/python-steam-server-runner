@@ -132,6 +132,10 @@ celerybeat.pid
 
 # Environments
 *.env*
+# Do NOT ignore .env.sample, as it provides a template for environment variables
+# (This line is not strictly necessary if .env.sample is not matched by a broader pattern,
+# but it explicitly clarifies intent if there were a pattern like `*.env*` above)
+!.env.sample
 .env/
 .hatch*
 .venv*

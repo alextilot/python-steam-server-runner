@@ -1,16 +1,13 @@
 import os
 from dataclasses import dataclass, field
-from typing import Literal
-
-from dotenv import load_dotenv
+from dotenv import load_dotenv  # type: ignore[reportUnknownMemberType]
 
 load_dotenv()
 
-AppEnvironment = Literal['local', 'development', 'staging', 'testing', 'production']
 
 @dataclass
-class Config:
-    app_environment: str 
+class AppConfig:
+    app_environment: str
     is_production: bool = field(init=False)
     debug_mode: bool = False  # Default value
 
@@ -24,7 +21,8 @@ class Config:
         def get_required_env(key: str) -> str:
             value = os.getenv(key)
             if value is None:
-                raise ValueError(f"Required environment variable '{key}' not set.")
+                raise ValueError(
+                    f"Required environment variable '{key}' not set.")
             return value
 
         return cls(
@@ -33,10 +31,10 @@ class Config:
             debug_mode=os.getenv("DEBUG_MODE", 'False').lower() == 'true'
         )
 
+
 try:
-    app_config = Config.from_env()
+    app_config = AppConfig.from_env()
 except ValueError as e:
     print(f"Configuration Error: {e}")
     # Exit the application cleanly if configuration fails
     exit(1)
-

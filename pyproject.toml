@@ -89,10 +89,13 @@ quote-style = "double"
 # Ensure imports are properly sorted
 [tool.ruff.lint.isort]
 # TODO: Replace "your_package_name" with the actual name of your package in the following section.
-known-first-party = ["your_package_name"]
+known-first-party = ["server_runner"]
 
 [tool.pyright]
-include = ["src", "tests"]
+include = ["src"]
+executionEnvironments = [
+  { root = "src" }
+]
 exclude = [
     "**/__pycache__",           # Python bytecode cache
     "**/.git",                  # Git repository data
@@ -111,7 +114,7 @@ exclude = [
 
 # Basic configuration
 typeCheckingMode = "strict"
-pythonVersion = "3.14"                 # Match Ruff 
+pythonVersion = "3.13"                 # Match Ruff 
 pythonPlatform = "All"
 
 
