@@ -10,25 +10,27 @@ SECONDS_IN_A_MINUTE = 60
 
 class Task:
     def __init__(self, server_action: ServerAction):
-        self.server = server_action
+        self.server: ServerAction = server_action
 
-    def do(self):
+    def do(self) -> None:
         raise NotImplementedError
 
 
 class TaskStart(Task):
-    def do(self):
+    def do(self) -> None:
         if not self.server.is_running():
             self.server.start()
 
 
 class TaskStop(Task):
-    def do(self):
+    def do(self) -> None:
         self.server.save()
         self.server.shutdown("Shuting down ...", 5)
 
         # Wait for server to shutdown.
-        not_running = lambda: not self.server.is_running()
+        def not_running():
+            return not self.server.is_running()
+
         self.server.wait_for(not_running, 60)
         if self.server.is_running():
             log.error("Game still running, forcing stop.")
@@ -37,12 +39,14 @@ class TaskStop(Task):
 
 
 class TaskUpdate(Task):
-    def do(self):
+    def do(self) -> None:
         self.server.update()
 
 
 class TaskCountdown(Task):
-    def __init__(self, server_action: ServerAction, title: str, delay_minutes=0):
+    def __init__(
+        self, server_action: ServerAction, title: str, delay_minutes: int = 0
+    ) -> None:
         super().__init__(server_action)
         self.title = title
         if delay_minutes > 0:
@@ -59,7 +63,7 @@ class TaskCountdown(Task):
             return total_minutes, "minutes"
         return seconds, "seconds"
 
-    def do(self):
+    def do(self) -> None:
         minutes = self.delay_minutes
         seconds = self.delay_seconds
         # Countdown every minute.
@@ -85,17 +89,17 @@ class TaskCountdown(Task):
 
 
 class TaskFactory:
-    def __init__(self, server_action: ServerAction):
+    def __init__(self, server_action: ServerAction) -> None:
         self.server_action = server_action
 
-    def start(self):
+    def start(self) -> TaskStart:
         return TaskStart(self.server_action)
 
-    def stop(self):
+    def stop(self) -> TaskStop:
         return TaskStop(self.server_action)
 
-    def update(self):
+    def update(self) -> TaskUpdate:
         return TaskUpdate(self.server_action)
 
-    def countdown(self, title: str, minute_delay=0):
+    def countdown(self, title: str, minute_delay: int = 0) -> TaskCountdown:
         return TaskCountdown(self.server_action, title, minute_delay)
