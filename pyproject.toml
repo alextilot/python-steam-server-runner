@@ -1,7 +1,3 @@
-[build-system]
-build-backend = "hatchling.build"
-requires = ["hatchling<1.22"]
-
 [project]
 authors = [{ email = "alextilot@gmail.com", name = "Alex Tilot" }]
 classifiers = [
@@ -38,45 +34,7 @@ show_missing = true
 
 [tool.coverage.run]
 command_line = "-m pytest"
-source = ["steam_server_runner", "tests"]
-
-[tool.hatch.build.targets.sdist]
-include = ["/steam_server_runner"]
-
-[tool.hatch.build.targets.wheel]
-packages = ["steam_server_runner"]
-
-[tool.hatch.envs.ci]
-dev-mode = false
-features = ["checks", "tests"]
-path = ".venv"
-
-[tool.hatch.envs.default]
-dev-mode = true
-features = ["checks", "docs", "tests"]
-path = ".venv"
-
-[tool.hatch.envs.default.scripts]
-check = [
-  "ruff check",
-  "ruff format --check",
-  "mypy",
-  "npx -s -y prettier@'^2' . --check",
-  "npx -s -y cspell --dot --gitignore *.md **/*.md",
-]
-format = [
-  "ruff check --fix",
-  "ruff format",
-  "npx -s -y prettier@'^2' . --write",
-]
-
-[tool.hatch.envs.production]
-dev-mode = false
-features = []
-path = ".venv"
-
-[tool.hatch.version]
-path = "steam_server_runner/__init__.py"
+source = ["server-runner", "tests"]
 
 
 [tool.pytest.ini_options]
@@ -84,36 +42,6 @@ addopts = "-q"
 minversion = "6.0"
 testpaths = ["tests"]
 
-
-[tool.ruff]
-# Set the maximum line length to 88 (Blacks default)
-line-length=88
-
-# Auto fixing of fixable violations
-fix = true
-
-target-version = "py314"
-
-[tool.ruff.lint]
-# Enable comprehensive rule sets
-select = [
-  "E",
-  "W",
-  "F",
-  "I",
-  "B",
-  "C4",
-  "UP",
-  "S",
-  "T20",
-  "SIM",
-  "N",
-]
-
-ignore = [
-  "E501",
-  "S101",
-]
 
 [tool.ruff]
 # Set the maximum line length to 88 (Black's default)
