@@ -1,27 +1,40 @@
 PYTHON_VERSION ?= 3.13
 VENV_NAME ?= server-runner
 
-.PHONY: all setup clean install test
+.DEFAULT_GOAL := all
+.PHONY: all setup install test clean lint format
 
-all: install test
+all: install lint test
 
 setup:
 	@echo "Setting up Python environment..."
-	@pyenv install $(PYTHON_VERSION) || true # Install if not already present
-	@pyenv virtualenv $(PYTHON_VERSION) $(VENV_NAME) || true # Create virtualenv if not already present
+	@pyenv install -s $(PYTHON_VERSION)
+	@pyenv virtualenv -f $(PYTHON_VERSION) $(VENV_NAME)
 	@pyenv local $(VENV_NAME)
 	@echo "Python environment setup complete. Run 'make install' to install dependencies."
 
 install: setup
 	@echo "Installing dependencies..."
-	@pip install --upgrade pip
-	@pip install -r requirements.txt
-	@pip install -r requirements-dev.txt
+	@python -m pip install --upgrade pip
+	@python -m pip install -r requirements.txt
+	@python -m pip install -r requirements-dev.txt
 	@echo "Dependencies installed."
+
+lint:
+	@echo "Running linter..."
+	@ruff check src tests
+	@black --check src tests
+	@echo "Linting complete."
+
+format:
+	@echo "Formatting code..."
+	@black src tests
+	@ruff --fix src tests
+	@echo "Code formatted."
 
 test:
 	@echo "Running tests..."
-	@pytest # Or your preferred testing command
+	@python -m pytest tests
 	@echo "Tests complete."
 
 clean:
