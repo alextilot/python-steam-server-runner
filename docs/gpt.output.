@@ -1,0 +1,61 @@
+import asyncio
+from prompt_toolkit.patch_stdout import patch_stdout
+from prompt_toolkit import PromptSession
+
+async def read_game_output(reader):
+    while True:
+        line = await reader.readline()
+        if not line:
+            break
+        print(f"\r{line.decode().rstrip()}", end="\n> ", flush=True)
+
+async def game_command_interface(process):
+    session = PromptSession("> ")
+    loop = asyncio.get_event_loop()
+
+    # Wrap stdout to prevent messing up the prompt
+    with patch_stdout():
+        # Start background task to read game output
+        asyncio.create_task(read_game_output(process.stdout))
+
+        while True:
+            try:
+                user_input = await session.prompt_async()
+                if user_input.strip().lower() in ["exit", "quit"]:
+                    process.terminate()
+                    break
+                process.stdin.write((user_input + "\n").encode())
+                await process.stdin.drain()
+            except (EOFError, KeyboardInterrupt):
+                process.terminate()
+                break
+
+async def main():
+    # Launch the game process (example: some executable)
+    process = await asyncio.create_subprocess_exec(
+        "your_game_executable",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT,
+        stdin=asyncio.subprocess.PIPE,
+    )
+    await game_command_interface(process)
+
+asyncio.run(main())
+
+
+
+
+Option 1: Use prompt_toolkit (Recommended)
+prompt_toolkit
+is the go-to library for advanced command-line interfaces. It supports:
+Async output
+Input editing
+Multi-line prompts
+History
+Even colors
+
+How this works:
+patch_stdout() ensures that any prints from the game do not overwrite the user’s current input.
+PromptSession allows the user to type commands while output keeps scrolling.
+User input is sent to the game via stdin.
+Supports Ctrl-C and exit handling.

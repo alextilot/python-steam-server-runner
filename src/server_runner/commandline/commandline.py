@@ -1,19 +1,20 @@
 import argparse
-import logging
-import sys
-from typing import Optional, Tuple, TypedDict
+from dataclasses import dataclass
 
-log = logging.getLogger(__name__)
+from server_runner.config.logging import get_logger
+
+log = get_logger()
 
 
-class StartArgs(TypedDict):
+@dataclass
+class ServerConfig:
     username: str
     password: str
     steam_path: str
     app_id: int
     api: str
     game_name: str
-    game_args: str
+    game_args: list[str]
 
 
 class CommandLine:
@@ -37,38 +38,14 @@ class CommandLine:
             "--game_name", required=True, help="Steam game name"
         )
 
-    def parse_start_args(self) -> StartArgs:
+    def parse_server_config(self) -> ServerConfig:
         args, other_args = self.parseArgs.parse_known_args()
-        return {
-            "username": args.username,
-            "password": args.password,
-            "steam_path": args.steam_path,
-            "app_id": args.app_id,
-            "api": args.api,
-            "game_name": args.game_name,
-            "game_args": " ".join(other_args),
-        }
-
-    def parse_user_input(self, input: str, process_command):
-        first_space_index = input.find(" ")
-        if first_space_index > -1:
-            # Remove the @ and get the full word.
-            first_word = input[:first_space_index]
-            rest_of_string = input[first_space_index + 1 :]
-            return process_command(first_word, rest_of_string)
-        return process_command(input)
-
-    def parse_command(self, process_command) -> Tuple[Optional[str], bool]:
-        try:
-            line = sys.stdin.readline().strip()
-            if not line:
-                return None, False
-            output = self.parse_user_input(line, process_command)
-            return output, False
-        except KeyboardInterrupt:
-            return None, True
-        except SystemExit:
-            return None, True
-        except Exception as e:
-            log.error(f"An error occured: {e}")
-            return None, False
+        return ServerConfig(
+            username=args.username,
+            password=args.password,
+            steam_path=args.steam_path,
+            app_id=args.app_id,
+            api=args.api,
+            game_name=args.game_name,
+            game_args=other_args,
+        )
