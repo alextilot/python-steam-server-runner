@@ -2,15 +2,14 @@ import logging
 import subprocess
 
 import requests
+from config.app_config import AppConfig
 from jsonschema import ValidationError, validate
 from steamcmd_schema import make_steamcmd_schema
-
-from server_runner.config.app_config import AppConfig
 
 log = logging.getLogger(__name__)
 
 
-class SteamVersionManager:
+class VersionManager:
     """
     Handles fetching current and latest Steam game versions,
     and checking for updates.

@@ -5,12 +5,11 @@ from collections.abc import Callable
 from typing import Literal, TypedDict
 
 import schedule
+from config.logging import get_logger
 from status_manager import StatusManager
 from workflow.workflow_catalog import WorkflowCatalog
 from workflow.workflow_job import WorkflowJob
 from workflow.workflow_queue import WorkflowQueue
-
-from server_runner.config.logging import get_logger
 
 log = get_logger()
 

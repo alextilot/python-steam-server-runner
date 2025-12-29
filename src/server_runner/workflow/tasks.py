@@ -1,6 +1,5 @@
-from servers.game_server_manager import GameServerManager
-
-from server_runner.config.logging import get_logger
+from config.logging import get_logger
+from steam.game_server_manager import GameServerManager
 
 log = get_logger()
 

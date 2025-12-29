@@ -1,6 +1,6 @@
 from typing import Generic, TypeVar
 
-from server_runner.config.logging import get_logger
+from config.logging import get_logger
 
 log = get_logger()
 

@@ -1,10 +1,11 @@
 import time
 
 from commandline.commandline import CommandLine
-from servers.api.games.palworld_api import PalWorldAPI
-from servers.game_server_manager import GameServerManager
-from servers.steam.steam_game_controller import SteamGameController
+from config.logging import get_logger, setup_logging
 from status_manager import StatusManager
+from steam.create_game_api import create_game_api
+from steam.game_server_manager import GameServerManager
+from steam.server.controller import SteamGameController
 from utils.system_metrics import (
     SYSTEM_MEMORY_THRESHOLD,
     SystemMetrics,
@@ -22,9 +23,6 @@ from workflow.workflow_factories import (
     out_of_memory,
 )
 from workflow.workflow_job import WorkflowJob
-
-from server_runner.config.logging import get_logger, setup_logging
-from server_runner.servers.create_game_api import create_game_api
 
 setup_logging()
 log = get_logger()

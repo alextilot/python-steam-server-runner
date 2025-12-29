@@ -1,8 +1,7 @@
 from dataclasses import dataclass, field
 
+from config.logging import get_logger
 from tasks import Task
-
-from server_runner.config.logging import get_logger
 
 log = get_logger()
 

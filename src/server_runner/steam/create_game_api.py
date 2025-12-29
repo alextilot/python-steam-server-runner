@@ -1,6 +1,6 @@
-from server_runner.constants.steam_app_id import SteamAppID
-from server_runner.servers.api.rest_api_base import RESTSteamGameAPI
-from server_runner.servers.api_registry import API_REGISTRY
+from api.rest_api_base import RESTSteamGameAPI
+from api_registry import API_REGISTRY
+from constants.steam_app_id import SteamAppID
 
 
 def create_game_api(

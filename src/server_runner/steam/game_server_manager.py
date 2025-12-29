@@ -2,9 +2,8 @@ import time
 from collections.abc import Callable
 
 from api.rest_api_base import RESTSteamGameAPI
-from steam.steam_game_controller import SteamGameController
-
-from server_runner.config.logging import get_logger
+from config.logging import get_logger
+from server.controller import SteamGameController
 
 log = get_logger()
 
