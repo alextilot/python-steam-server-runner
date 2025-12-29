@@ -37,18 +37,16 @@ class PalWorldAPI(RESTSteamGameAPI):
     # ------------------------
     # Server Control
     # ------------------------
-    def announce(self, *args: str) -> None:
+    def announce(self, message: str) -> None:
         """Send a server-wide announcement."""
-        message: str = " ".join(args)
         self._post("/v1/api/announce", {"message": message})
 
     def save(self) -> None:
         """Save the server state."""
         self._post("/v1/api/save", {})
 
-    def shutdown(self, *args: str, delay: int = 10) -> None:
+    def shutdown(self, message: str, delay: int = 10) -> None:
         """Shutdown the server with optional message and delay."""
-        message: str = " ".join(args)
         self._post("/v1/api/shutdown", {"waittime": delay, "message": message})
 
     def stop(self) -> None:

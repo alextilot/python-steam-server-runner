@@ -1,8 +1,17 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from collections.abc import Iterable, Mapping
+from typing import Any, TypeVar
 
 import requests
 from requests.auth import AuthBase
+
+T = TypeVar("T")
+
+ParamsKey = str | bytes | int | float
+ParamsValue = str | bytes | int | float | Iterable[str | bytes | int | float] | None
+RequestParams = Mapping[ParamsKey, ParamsValue]
+
+JsonMapping = Mapping[str, object]
 
 
 class RESTSteamGameAPI(ABC):
@@ -25,7 +34,9 @@ class RESTSteamGameAPI(ABC):
     # ------------------------
     # HTTP Helpers
     # ------------------------
-    def _get(self, endpoint: str, params: dict | None = None) -> dict[str, Any]:
+    def _get(
+        self, endpoint: str, params: RequestParams | None = None
+    ) -> dict[str, Any]:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
             response = requests.get(
@@ -36,7 +47,7 @@ class RESTSteamGameAPI(ABC):
         except requests.RequestException as e:
             raise RuntimeError(f"GET {url} failed: {e}") from e
 
-    def _post(self, endpoint: str, json: dict | None = None) -> Any:
+    def _post(self, endpoint: str, json: JsonMapping | None = None) -> Any:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         try:
             response = requests.post(

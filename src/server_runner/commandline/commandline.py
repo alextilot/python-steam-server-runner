@@ -10,9 +10,9 @@ log = get_logger()
 class ServerConfig:
     username: str
     password: str
-    steam_path: str
+    api_base_url: str
     app_id: int
-    api: str
+    steam_path: str
     game_name: str
     game_args: list[str]
 
@@ -24,18 +24,30 @@ class CommandLine:
             prog="ServerRunner", description="Runs a server", epilog=""
         )
         self.parseArgs.add_argument(
-            "--username", required=True, help="Username for steam server"
+            "-u",
+            "--username",
+            required=True,
+            help="Username for steam server",
+            type=str,
         )
         self.parseArgs.add_argument(
-            "--password", required=True, help="Password for steam server"
+            "-p",
+            "--password",
+            required=True,
+            help="Password for steam server",
+            type=str,
         )
-        self.parseArgs.add_argument("--steam_path", required=True, help="Steam path")
         self.parseArgs.add_argument(
-            "--app_id", required=True, help="AppId for steam game"
+            "-e", "--api_base_url", required=True, help="Steam game api", type=str
         )
-        self.parseArgs.add_argument("--api", required=True, help="Steam game api")
         self.parseArgs.add_argument(
-            "--game_name", required=True, help="Steam game name"
+            "-i" "--app_id", required=True, help="AppId for steam game", type=int
+        )
+        self.parseArgs.add_argument(
+            "-s", "--steam_path", required=True, help="Steam path", type=str
+        )
+        self.parseArgs.add_argument(
+            "-n", "--game_name", required=True, help="Steam game name", type=str
         )
 
     def parse_server_config(self) -> ServerConfig:
@@ -43,9 +55,9 @@ class CommandLine:
         return ServerConfig(
             username=args.username,
             password=args.password,
-            steam_path=args.steam_path,
+            api_base_url=args.api_base_url,
             app_id=args.app_id,
-            api=args.api,
+            steam_path=args.steam_path,
             game_name=args.game_name,
             game_args=other_args,
         )

@@ -24,6 +24,7 @@ from workflow.workflow_factories import (
 from workflow.workflow_job import WorkflowJob
 
 from server_runner.config.logging import get_logger, setup_logging
+from server_runner.servers.create_game_api import create_game_api
 
 setup_logging()
 log = get_logger()
@@ -39,12 +40,12 @@ def main():
         config.game_name,
         config.game_args,
     )
-    # i would like to match the game with the API and just return the base to be polymorhpic.
-    # then pass the api around; the cli would then attempt to call functions on it if it exists.
-    api = PalWorldAPI(
-        config.api,
-        config.username,
-        config.password,
+
+    api = create_game_api(
+        app_id=config.app_id,
+        base_url=config.api_base_url,
+        username=config.username,
+        password=config.password,
     )
 
     gsm = GameServerManager(api, controller)
