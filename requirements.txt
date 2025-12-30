@@ -2,4 +2,6 @@ psutil
 schedule
 requests
 jsonschema
-pytest
+python-dotenv
+prompt_toolkit
+vdf
