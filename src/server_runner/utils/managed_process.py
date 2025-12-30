@@ -1,4 +1,5 @@
 import os
+import signal
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -28,7 +29,7 @@ class ManagedProcess:
         """
         Start the process, streaming output to the terminal.
         """
-        if self._proc is not None:
+        if self.is_running():
             raise RuntimeError("Process already started")
 
         self._proc = subprocess.Popen(
@@ -47,11 +48,12 @@ class ManagedProcess:
         Gracefully terminate the process using SIGTERM.
         Falls back to kill() if timeout expires.
         """
-        if self._proc is None:
+        if not self.is_running():
+            self._proc = None
             return
 
         try:
-            self._proc.terminate()
+            os.killpg(self._proc.pid, signal.SIGTERM)
             self._proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             self.kill()
@@ -62,7 +64,8 @@ class ManagedProcess:
         """
         Kill the process and all child processes using psutil.
         """
-        if self._proc is None:
+        if not self.is_running():
+            self._proc = None
             return
 
         try:
@@ -79,7 +82,8 @@ class ManagedProcess:
         """
         Restart the process by terminating and starting it again.
         """
-        self.terminate()
+        if self.is_running():
+            self.terminate()
         self.start()
 
     # ---------- inspection ----------
@@ -97,12 +101,14 @@ class ManagedProcess:
         """
         Return the exit code if the process has finished, otherwise None.
         """
-        if self._proc is None:
-            return None
-        return self._proc.poll()
+        if not self.is_running():
+            return self._proc.poll() if self._proc else None
+        return None
 
     def pid(self) -> int | None:
         """
         Return the PID of the running process, or None if not running.
         """
-        return self._proc.pid if self._proc else None
+        if self.is_running() and self._proc:
+            return self._proc.pid
+        return None
