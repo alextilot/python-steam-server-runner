@@ -42,8 +42,8 @@ def main():
     api = create_game_api(
         app_id=config.app_id,
         base_url=config.api_base_url,
-        username=config.username,
-        password=config.password,
+        username=config.api_username,
+        password=config.api_password,
     )
 
     gsm = GameServerManager(api, controller)
