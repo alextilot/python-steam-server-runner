@@ -20,6 +20,12 @@ install: setup
 	@python -m pip install -r requirements-dev.txt
 	@echo "Dependencies installed."
 
+# New target for editable/dev install
+dev-install: install
+	@echo "Installing package in editable mode..."
+	@python -m pip install -e .
+	@echo "Editable install complete. You can now run 'server-runner' from anywhere."
+
 lint:
 	@echo "Running linter..."
 	@ruff check src tests
