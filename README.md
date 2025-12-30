@@ -71,12 +71,12 @@ Any extra arguments passed after the known flags are forwarded directly to the g
 
 ```bash
 python -m server_runner \
-  --api_token basic \
-  --api_username myuser \
-  --api_password mypass \
-  --api_base_url https://api.steampowered.com \
-  --app_id 2394010 \
-  --steam_path /opt/steam \
+  --api-auth-type basic \
+  --api-username myuser \
+  --api-password mypass \
+  --api-base-url https://api.steampowered.com \
+  --app-id 2394010 \
+  --steam-path /opt/steam \
   -- -port=8211 -players=16
 ```
 
