@@ -86,26 +86,6 @@ In this example:
 
 ---
 
-## Server Configuration Model
-
-The parsed CLI arguments are converted into a strongly-typed config object:
-
-```python
-@dataclass
-class ServerConfig:
-    app_id: int
-    steam_path: str
-    game_name: str
-    game_args: list[str]
-    api_username: str
-    api_password: str
-    api_base_url: str
-```
-
-This makes it easy to pass configuration through the rest of the system without leaking argparse everywhere.
-
----
-
 ## Development Commands
 
 ### Run all checks (default)
