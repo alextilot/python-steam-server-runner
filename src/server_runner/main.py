@@ -33,22 +33,16 @@ def main():
     config = command_line.parse_server_config()
 
     controller = SteamServerController(
-        config.steam_path,
         config.app_id,
-        config.game_name,
+        config.steam_path,
         config.game_args,
     )
 
     api = create_game_api(
-        app_id=config.app_id,
-        base_url=config.api_base_url,
-        auth_info={
-            "username": config.api_username,
-            "password": config.api_password,
-        },
+        app_id=config.app_id, base_url=config.api_base_url, auth_info=config.auth_info
     )
 
-    gsm = GameServerManager(api, controller)
+    gsm = GameServerManager(controller, api)
 
     tasks = TaskFactory(gsm)
 

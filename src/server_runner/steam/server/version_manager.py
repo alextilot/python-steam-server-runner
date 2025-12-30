@@ -1,12 +1,12 @@
-import logging
 import subprocess
 
 import requests
 from jsonschema import ValidationError, validate
 
+from server_runner.config.logging import get_logger
 from server_runner.steam.server.steamcmd_schema import make_steamcmd_schema
 
-log = logging.getLogger(__name__)
+log = get_logger()
 
 
 class SteamServerVersionManager:

@@ -49,16 +49,17 @@ make install
 
 ServerRunner is invoked via the command line and requires Steam credentials and game metadata.
 
-### Required Arguments
+### CLI Arguments
 
-| Flag                   | Description                |
-| ---------------------- | -------------------------- |
-| `-i`, `--app_id`       | Steam App ID               |
-| `-s`, `--steam_path`   | Path to Steam installation |
-| `-n`, `--game_name`    | Name of the Steam game     |
-| `-b`, `--api_base_url` | Steam game API base URL    |
-| `-u`, `--api_username` | Steam game API username    |
-| `-p`, `--api_password` | Steam game API password    |
+| Flag              | Description                |
+| ----------------  | -------------------------- |
+| `--app_id`        | Steam App ID               |
+| `--steam_path`    | Path to Steam installation |
+| `--api_base_url`  | Steam game API base URL    |
+| `--api_auth_type` | Steam game API username    |
+| `--api_username`  | Steam game API username    |
+| `--api_password`  | Steam game API password    |
+| `--api_token`     | Steam game API username    |
 
 ### Additional Arguments
 
@@ -70,12 +71,12 @@ Any extra arguments passed after the known flags are forwarded directly to the g
 
 ```bash
 python -m server_runner \
+  --api_token basic \
   --api_username myuser \
   --api_password mypass \
   --api_base_url https://api.steampowered.com \
   --app_id 2394010 \
   --steam_path /opt/steam \
-  --game_name palworld \
   -- -port=8211 -players=16
 ```
 

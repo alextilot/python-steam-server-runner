@@ -14,9 +14,9 @@ class GameServerManager:
     including process lifecycle and API interactions.
     """
 
-    def __init__(self, api: RESTSteamServerAPI, controller: SteamServerController):
-        self.api = api
+    def __init__(self, controller: SteamServerController, api: RESTSteamServerAPI):
         self.controller = controller
+        self.api = api
 
     # ---------- Lifecycle Management ----------
 
