@@ -53,13 +53,13 @@ ServerRunner is invoked via the command line and requires Steam credentials and 
 
 | Flag              | Description                |
 | ----------------  | -------------------------- |
-| `--app_id`        | Steam App ID               |
-| `--steam_path`    | Path to Steam installation |
-| `--api_base_url`  | Steam game API base URL    |
-| `--api_auth_type` | Steam game API username    |
-| `--api_username`  | Steam game API username    |
-| `--api_password`  | Steam game API password    |
-| `--api_token`     | Steam game API username    |
+| `--app-id`        | Steam App ID               |
+| `--steam-path`    | Path to Steam installation |
+| `--api-base-url`  | Steam game API base URL    |
+| `--api-auth-type` | Steam game API username    |
+| `--api-username`  | Steam game API username    |
+| `--api-password`  | Steam game API password    |
+| `--api-token`     | Steam game API username    |
 
 ### Additional Arguments
 
