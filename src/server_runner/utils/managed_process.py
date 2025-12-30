@@ -85,14 +85,24 @@ class ManagedProcess:
     # ---------- inspection ----------
 
     def is_running(self) -> bool:
+        """
+        Return True if the process is currently running.
+        Handles processes that have exited unexpectedly.
+        """
         if self._proc is None:
             return False
         return self._proc.poll() is None
 
     def exit_code(self) -> int | None:
+        """
+        Return the exit code if the process has finished, otherwise None.
+        """
         if self._proc is None:
             return None
         return self._proc.poll()
 
     def pid(self) -> int | None:
+        """
+        Return the PID of the running process, or None if not running.
+        """
         return self._proc.pid if self._proc else None
