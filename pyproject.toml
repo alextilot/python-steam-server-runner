@@ -27,6 +27,9 @@ tests = [
   "pytest-mock>=3,<4",
 ]
 
+[project.scripts]
+server-runner = "server_runner.main:main"
+
 [tool.coverage.report]
 exclude_lines = ["if TYPE_CHECKING:", "pragma: no cover"]
 fail_under = 70
