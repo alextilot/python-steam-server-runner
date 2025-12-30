@@ -49,8 +49,9 @@ class ManagedProcess:
             cwd=self.cwd,
             env=self.env,
             shell=self.shell,
-            stdout=PIPE,
-            stderr=PIPE,
+            stdin=None,
+            stdout=None,
+            stderr=None,
             text=True,
             start_new_session=True,  # isolate process group (Linux)
         )
