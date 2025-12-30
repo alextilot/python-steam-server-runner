@@ -1,9 +1,8 @@
 import os
 import signal
 import subprocess
-import sys
 from collections.abc import Sequence
-from subprocess import Popen
+from subprocess import PIPE, Popen
 
 
 class ManagedProcess:
@@ -50,9 +49,9 @@ class ManagedProcess:
             cwd=self.cwd,
             env=self.env,
             shell=self.shell,
-            stdin=sys.stdin,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
+            stdin=None,
+            stdout=None,
+            stderr=None,
             text=True,
             start_new_session=True,  # isolate process group (Linux)
         )
