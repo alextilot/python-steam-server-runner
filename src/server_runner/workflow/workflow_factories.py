@@ -1,5 +1,5 @@
-from tasks import TaskFactory
-from workflow.workflow_job import WorkflowJob
+from server_runner.workflow.tasks import TaskFactory
+from server_runner.workflow.workflow_job import WorkflowJob
 
 
 def fresh_start(task: TaskFactory) -> WorkflowJob:

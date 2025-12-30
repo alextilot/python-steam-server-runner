@@ -1,7 +1,7 @@
 import logging
 
-from steam.game_server_manager import GameServerManager
-from utils.system_metrics import SystemMetrics
+from server_runner.steam.game_server_manager import GameServerManager
+from server_runner.utils.system_metrics import SystemMetrics
 
 log = logging.getLogger(__name__)
 

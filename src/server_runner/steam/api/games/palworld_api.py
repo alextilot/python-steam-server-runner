@@ -1,19 +1,30 @@
 from typing import Any
 
 from requests.auth import HTTPBasicAuth
-from rest_api_base import RESTSteamGameAPI
+
+from server_runner.steam.api.auth_info import AuthInfo
+from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
 
 
-class PalWorldAPI(RESTSteamGameAPI):
+class PalWorldAPI(RESTSteamServerAPI):
     """
-    Palworld REST API client using the reusable RESTSteamGameAPI base.
+    Palworld REST API client using the reusable RESTSteamServerAPI base.
     """
 
-    def __init__(
-        self, base_url: str, username: str, password: str, timeout: int = 10
-    ) -> None:
-        auth = HTTPBasicAuth(username, password)
-        super().__init__(base_url=base_url, auth=auth, timeout=timeout)
+    def _build_auth(self, auth_info: AuthInfo | None):
+        if not auth_info:
+            raise ValueError("auth_info is required")
+
+        username = auth_info.get("username")
+        password = auth_info.get("password")
+
+        if not isinstance(username, str) or not username:
+            raise ValueError("auth_info.username must be a non-empty string")
+
+        if not isinstance(password, str) or not password:
+            raise ValueError("auth_info.password must be a non-empty string")
+
+        return HTTPBasicAuth(username, password)
 
     # ------------------------
     # Server Info

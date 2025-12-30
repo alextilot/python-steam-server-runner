@@ -1,14 +1,14 @@
 import logging
 import os.path
 
-from steam_version_manager import SteamVersionManager
-from utils.managed_process import ManagedProcess
-from validators.os import os_path_exists_raise
+from server_runner.steam.server.version_manager import SteamServerVersionManager
+from server_runner.utils.managed_process import ManagedProcess
+from server_runner.validators.os import os_path_exists_raise
 
 log = logging.getLogger(__name__)
 
 
-class SteamGameController:
+class SteamServerController:
     """
     Manages a single Steam game instance:
       - Starts, stops, and restarts the game process
@@ -41,7 +41,7 @@ class SteamGameController:
         self.game_command = [game_shell_script] + self.server_arguments
 
         self.managed_process: ManagedProcess | None = None
-        self.version_manager = SteamVersionManager(app_id)
+        self.version_manager = SteamServerVersionManager(app_id)
 
     # ---------- process management ----------
     def start(self, auto_update: bool = False) -> None:

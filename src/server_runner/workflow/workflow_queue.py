@@ -1,7 +1,7 @@
 from queue import Empty, PriorityQueue
 
-from config.logging import get_logger
-from workflow.workflow_job import WorkflowJob
+from server_runner.config.logging import get_logger
+from server_runner.workflow.workflow_job import WorkflowJob
 
 log = get_logger()
 

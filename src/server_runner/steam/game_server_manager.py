@@ -1,9 +1,9 @@
 import time
 from collections.abc import Callable
 
-from api.rest_api_base import RESTSteamGameAPI
-from config.logging import get_logger
-from server.controller import SteamGameController
+from server_runner.config.logging import get_logger
+from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
+from server_runner.steam.server.controller import SteamServerController
 
 log = get_logger()
 
@@ -14,7 +14,7 @@ class GameServerManager:
     including process lifecycle and API interactions.
     """
 
-    def __init__(self, api: RESTSteamGameAPI, controller: SteamGameController):
+    def __init__(self, api: RESTSteamServerAPI, controller: SteamServerController):
         self.api = api
         self.controller = controller
 

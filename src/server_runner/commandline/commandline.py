@@ -1,7 +1,7 @@
 import argparse
 from dataclasses import dataclass
 
-from config.logging import get_logger
+from server_runner.config.logging import get_logger
 
 log = get_logger()
 

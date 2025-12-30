@@ -1,20 +1,20 @@
 import time
 
-from commandline.commandline import CommandLine
-from config.logging import get_logger, setup_logging
-from status_manager import StatusManager
-from steam.create_game_api import create_game_api
-from steam.game_server_manager import GameServerManager
-from steam.server.controller import SteamGameController
-from utils.system_metrics import (
+from server_runner.commandline.commandline import CommandLine
+from server_runner.config.logging import get_logger, setup_logging
+from server_runner.status_manager import StatusManager
+from server_runner.steam.create_game_api import create_game_api
+from server_runner.steam.game_server_manager import GameServerManager
+from server_runner.steam.server.controller import SteamServerController
+from server_runner.utils.system_metrics import (
     SYSTEM_MEMORY_THRESHOLD,
     SystemMetrics,
     get_memory_usage_percent,
 )
-from workflow.tasks import TaskFactory
-from workflow.workflow_catalog import WorkflowCatalog
-from workflow.workflow_engine import WorkflowEngine
-from workflow.workflow_factories import (
+from server_runner.workflow.tasks import TaskFactory
+from server_runner.workflow.workflow_catalog import WorkflowCatalog
+from server_runner.workflow.workflow_engine import WorkflowEngine
+from server_runner.workflow.workflow_factories import (
     fresh_start,
     game_restart,
     game_start,
@@ -22,7 +22,7 @@ from workflow.workflow_factories import (
     game_update,
     out_of_memory,
 )
-from workflow.workflow_job import WorkflowJob
+from server_runner.workflow.workflow_job import WorkflowJob
 
 setup_logging()
 log = get_logger()
@@ -32,7 +32,7 @@ def main():
     command_line = CommandLine()
     config = command_line.parse_server_config()
 
-    controller = SteamGameController(
+    controller = SteamServerController(
         config.steam_path,
         config.app_id,
         config.game_name,
@@ -42,8 +42,10 @@ def main():
     api = create_game_api(
         app_id=config.app_id,
         base_url=config.api_base_url,
-        username=config.api_username,
-        password=config.api_password,
+        auth_info={
+            "username": config.api_username,
+            "password": config.api_password,
+        },
     )
 
     gsm = GameServerManager(api, controller)

@@ -1,16 +1,16 @@
-from api.rest_api_base import RESTSteamGameAPI
-from api_registry import API_REGISTRY
-from constants.steam_app_id import SteamAppID
+from server_runner.steam.api.auth_info import AuthInfo
+from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
+from server_runner.steam.api_registry import API_REGISTRY
+from server_runner.steam.steam_app_id import SteamAppID
 
 
 def create_game_api(
     *,
     app_id: int,
     base_url: str,
-    username: str,
-    password: str,
+    auth_info: AuthInfo | None,
     timeout: int = 10,
-) -> RESTSteamGameAPI:
+) -> RESTSteamServerAPI:
     try:
         steam_id = SteamAppID(app_id)
     except ValueError as e:
@@ -22,7 +22,6 @@ def create_game_api(
 
     return api_cls(
         base_url=base_url,
-        username=username,
-        password=password,
+        auth_info=auth_info,
         timeout=timeout,
     )

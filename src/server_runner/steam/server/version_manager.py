@@ -2,14 +2,14 @@ import logging
 import subprocess
 
 import requests
-from config.app_config import AppConfig
 from jsonschema import ValidationError, validate
-from steamcmd_schema import make_steamcmd_schema
+
+from server_runner.steam.server.steamcmd_schema import make_steamcmd_schema
 
 log = logging.getLogger(__name__)
 
 
-class VersionManager:
+class SteamServerVersionManager:
     """
     Handles fetching current and latest Steam game versions,
     and checking for updates.
@@ -43,7 +43,7 @@ class VersionManager:
     def get_latest_version(self) -> int | None:
         url = f"https://api.steamcmd.net/v1/info/{self.app_id}"
         try:
-            response = requests.get(url, timeout=AppConfig.request_timeout)
+            response = requests.get(url, timeout=10)
             response.raise_for_status()
             data = response.json()
             validate(instance=data, schema=self.steamcmd_schema)

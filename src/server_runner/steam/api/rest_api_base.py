@@ -3,7 +3,8 @@ from collections.abc import Iterable, Mapping
 from typing import Any, TypeVar
 
 import requests
-from requests.auth import AuthBase
+
+from server_runner.steam.api.auth_info import AuthInfo
 
 T = TypeVar("T")
 
@@ -14,13 +15,15 @@ RequestParams = Mapping[ParamsKey, ParamsValue]
 JsonMapping = Mapping[str, object]
 
 
-class RESTSteamGameAPI(ABC):
+class RESTSteamServerAPI(ABC):
     """
     Base class for RESTful Steam game APIs.
     Handles GET/POST requests and defines abstract server methods.
     """
 
-    def __init__(self, base_url: str, auth: AuthBase | None = None, timeout: int = 10):
+    def __init__(
+        self, *, base_url: str, auth_info: AuthInfo | None = None, timeout: int = 10
+    ):
         """
         Args:
             base_url: Base URL of the REST API (e.g., "http://localhost:8212").
@@ -28,8 +31,12 @@ class RESTSteamGameAPI(ABC):
             timeout: Request timeout in seconds.
         """
         self.base_url = base_url.rstrip("/")
-        self.auth = auth
+        self.auth = self._build_auth(auth_info)
         self.timeout = timeout
+
+    @abstractmethod
+    def _build_auth(self, auth_info: AuthInfo | None) -> Any:
+        raise NotImplementedError
 
     # ------------------------
     # HTTP Helpers
