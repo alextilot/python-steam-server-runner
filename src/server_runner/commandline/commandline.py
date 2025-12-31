@@ -10,7 +10,8 @@ log = get_logger()
 @dataclass
 class ServerConfig:
     app_id: int
-    steam_path: str
+    steam_path: str | None
+    install_dir: str | None
     game_args: list[str]
     api_base_url: str
     auth_type: str
@@ -27,9 +28,9 @@ class CommandLine:
         self.parseArgs.add_argument(
             "--app-id", required=True, type=int, help="App ID for the Steam game"
         )
-        self.parseArgs.add_argument(
-            "--steam-path", required=True, type=str, help="Path to Steam installation"
-        )
+        group = self.parseArgs.add_mutually_exclusive_group(required=True)
+        group.add_argument("--steam-path", type=str, help="Path to Steam installation")
+        group.add_argument("--install-dir", type=str, help="Path to Game installation")
 
         # API arguments
         self.parseArgs.add_argument(
@@ -76,6 +77,7 @@ class CommandLine:
         return ServerConfig(
             app_id=args.app_id,
             steam_path=args.steam_path,
+            install_dir=args.install_dir,
             game_args=other_args,
             api_base_url=args.api_base_url,
             auth_type=args.auth_type,

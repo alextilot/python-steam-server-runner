@@ -1,5 +1,5 @@
 from server_runner.config.logging import get_logger
-from server_runner.steam.server.manifest_helper import SteamManifestHelper
+from server_runner.steam.server.install_resolver import SteamInstallResolver
 from server_runner.steam.server.version_manager import SteamServerVersionManager
 from server_runner.utils.managed_process import ManagedProcess
 
@@ -16,24 +16,16 @@ class SteamServerController:
 
     def __init__(
         self,
-        app_id: str | int,
-        steam_path: str,
+        app_id: int,
+        resolver: SteamInstallResolver,
         server_arguments: list[str] | None = None,
     ):
         self.server_arguments = server_arguments or []
 
-        # Use manifest helper to resolve the game directory
-        self.manifest_helper = SteamManifestHelper(steam_path)
-        self.game_dir = self.manifest_helper.get_game_dir(int(app_id))
+        self.game_dir = resolver.get_game_dir()
+        self.game_exe = resolver.get_game_executable()
+        self.game_cmd = [str(self.game_exe)] + self.server_arguments
 
-        # Detect executable: assume same name as folder with .sh for Linux/macOS
-        self.game_shell_script = self.game_dir / f"{self.game_dir.name}.sh"
-        if not self.game_shell_script.exists():
-            raise FileNotFoundError(
-                f"Game executable not found: {self.game_shell_script}"
-            )
-
-        self.game_command = [str(self.game_shell_script)] + self.server_arguments
         self.managed_process: ManagedProcess | None = None
         self.version_manager = SteamServerVersionManager(app_id)
 
@@ -47,7 +39,7 @@ class SteamServerController:
             log.info(f"Auto-update enabled, updating {self.game_dir.name}...")
             self.version_manager.update()
 
-        self.managed_process = ManagedProcess(self.game_command, shell=True)
+        self.managed_process = ManagedProcess(self.game_cmd, shell=True)
         self.managed_process.start()
         log.info(f"Started {self.game_dir.name} (PID {self.pid()})")
 
