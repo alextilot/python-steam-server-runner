@@ -6,6 +6,7 @@ from server_runner.status_manager import StatusManager
 from server_runner.steam.create_game_api import create_game_api
 from server_runner.steam.game_server_manager import GameServerManager
 from server_runner.steam.server.controller import SteamServerController
+from server_runner.steam.server.install_resolver import SteamInstallResolver
 from server_runner.utils.system_metrics import (
     SYSTEM_MEMORY_THRESHOLD,
     SystemMetrics,
@@ -32,9 +33,13 @@ def main():
     command_line = CommandLine()
     config = command_line.parse_server_config()
 
+    resolver = SteamInstallResolver(
+        config.app_id, steam_path=config.steam_path, install_dir=config.install_dir
+    )
+
     controller = SteamServerController(
         config.app_id,
-        config.steam_path,
+        resolver,
         config.game_args,
     )
 
