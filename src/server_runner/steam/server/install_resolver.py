@@ -37,9 +37,6 @@ class SteamInstallResolver:
 
         self.install_dir = Path(install_dir) if install_dir else None
         self.steam_path = Path(steam_path) if steam_path else None
-        self.steamapps_path = (
-            self.steam_path / self.STEAM_APPS_DIR if self.steam_path else None
-        )
 
         self._validate_paths()
 
@@ -61,14 +58,14 @@ class SteamInstallResolver:
             raise FileNotFoundError(
                 f"Install directory does not exist: {self.install_dir}"
             )
-        if self.steamapps_path and not self.steamapps_path.exists():
+        if self.steam_path and not self.steam_path.exists():
             raise FileNotFoundError(
-                f"Steam 'steamapps' directory not found: {self.steamapps_path}"
+                f"Steam directory does not exist: {self.steam_path}"
             )
 
-    def _read_manifest(self, path: Path) -> str:
+    def _read_manifest(self, root: Path) -> str:
         """Read the install directory name from the manifest."""
-        manifest = path / f"appmanifest_{self.steam_app_id}.acf"
+        manifest = root / self.STEAM_APPS_DIR / f"appmanifest_{self.steam_app_id}.acf"
         if not manifest.exists():
             raise FileNotFoundError(
                 f"Manifest not found for App ID {self.steam_app_id}: {manifest}"
@@ -87,9 +84,9 @@ class SteamInstallResolver:
             name = self._read_manifest(self.install_dir)
             return self.install_dir, name
 
-        assert self.steamapps_path is not None
-        name = self._read_manifest(self.steamapps_path)
-        game_dir = self.steamapps_path / self.COMMON_DIR / name
+        assert self.steam_path is not None
+        name = self._read_manifest(self.steam_path)
+        game_dir = self.steam_path / self.STEAM_APPS_DIR / self.COMMON_DIR / name
 
         if not game_dir.exists():
             raise FileNotFoundError(
