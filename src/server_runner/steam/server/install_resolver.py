@@ -31,26 +31,17 @@ class SteamInstallResolver:
         self.steam_app_id = steam_app_id
 
         if steam_path and install_dir:
-            raise ValueError("Provide either steam_path or install_dir, not both")
+            raise ValueError("Provide either steam_path or install_dir, not both.")
         if not steam_path and not install_dir:
-            raise ValueError("One of steam_path or install_dir must be provided")
+            raise ValueError("One of steam_path or install_dir must be provided.")
 
-        # Manage all path logic internally
         self.install_dir = Path(install_dir) if install_dir else None
         self.steam_path = Path(steam_path) if steam_path else None
         self.steamapps_path = (
-            (self.steam_path / self.STEAM_APPS_DIR) if self.steam_path else None
+            self.steam_path / self.STEAM_APPS_DIR if self.steam_path else None
         )
 
-        # Validate existence early
-        if self.install_dir and not self.install_dir.exists():
-            raise FileNotFoundError(
-                f"Install directory does not exist: {self.install_dir}"
-            )
-        if self.steamapps_path and not self.steamapps_path.exists():
-            raise FileNotFoundError(
-                f"Steam 'steamapps' directory not found: {self.steamapps_path}"
-            )
+        self._validate_paths()
 
     @classmethod
     def from_install_dir(
@@ -64,46 +55,57 @@ class SteamInstallResolver:
     ) -> "SteamInstallResolver":
         return cls(steam_app_id, steam_path=steam_path)
 
-    def get_game_dir(self) -> Path:
-        """
-        Return the path to the game's installation directory.
-
-        - Returns install_dir if provided (force_install_dir)
-        - Otherwise resolves via steam_path + manifest
-        """
-        if self.install_dir:
-            return self.install_dir
-
-        assert self.steamapps_path is not None  # for type checkers
-
-        manifest_path = self.steamapps_path / f"appmanifest_{self.steam_app_id}.acf"
-        if not manifest_path.exists():
+    def _validate_paths(self) -> None:
+        """Ensure provided paths exist."""
+        if self.install_dir and not self.install_dir.exists():
             raise FileNotFoundError(
-                f"Manifest not found for App ID {self.steam_app_id}: {manifest_path}"
+                f"Install directory does not exist: {self.install_dir}"
+            )
+        if self.steamapps_path and not self.steamapps_path.exists():
+            raise FileNotFoundError(
+                f"Steam 'steamapps' directory not found: {self.steamapps_path}"
             )
 
-        with open(manifest_path, encoding="utf-8") as f:
-            data = vdf.load(f)
+    def _read_manifest(self, path: Path) -> str:
+        """Read the install directory name from the manifest."""
+        manifest = path / f"appmanifest_{self.steam_app_id}.acf"
+        if not manifest.exists():
+            raise FileNotFoundError(
+                f"Manifest not found for App ID {self.steam_app_id}: {manifest}"
+            )
 
-        installdir = data["AppState"]["installdir"]
-        game_dir = self.steamapps_path / self.COMMON_DIR / installdir
+        with open(manifest, encoding="utf-8") as f:
+            data = vdf.load(f)
+        return data["AppState"]["installdir"]
+
+    def get_game_dir(self) -> tuple[Path, str]:
+        """
+        Return the game's installation directory path and name.
+        Resolves from install_dir if provided, otherwise via steam_path + manifest.
+        """
+        if self.install_dir:
+            name = self._read_manifest(self.install_dir)
+            return self.install_dir, name
+
+        assert self.steamapps_path is not None
+        name = self._read_manifest(self.steamapps_path)
+        game_dir = self.steamapps_path / self.COMMON_DIR / name
 
         if not game_dir.exists():
             raise FileNotFoundError(
                 f"Resolved game directory does not exist: {game_dir}"
             )
 
-        return game_dir
+        return game_dir, name
 
     def get_game_executable(self) -> Path:
-        """Return the expected shell script executable for the game"""
-        game_dir = self.get_game_dir()
-        base_name = game_dir.name
-
-        if sys.platform.startswith("win"):
-            exe = game_dir / f"{base_name}.exe"
-        else:
-            exe = game_dir / f"{base_name}.sh"
+        """Return the expected game executable path."""
+        game_dir, name = self.get_game_dir()
+        exe = (
+            game_dir / f"{name}.exe"
+            if sys.platform.startswith("win")
+            else game_dir / f"{name}.sh"
+        )
 
         if not exe.exists():
             raise FileNotFoundError(f"Game executable not found: {exe}")
