@@ -4,6 +4,7 @@ from pathlib import Path
 import vdf  # type: ignore[reportUnknownMemberType]
 
 from server_runner.config.logging import get_logger
+from server_runner.steam.app.steam_app_id import SteamAppID
 
 log = get_logger()
 
@@ -22,12 +23,12 @@ class SteamInstallResolver:
 
     def __init__(
         self,
-        app_id: int,
+        steam_app_id: SteamAppID,
         *,
         steam_path: str | None = None,
         install_dir: str | None = None,
     ):
-        self.app_id = app_id
+        self.steam_app_id = steam_app_id
 
         if steam_path and install_dir:
             raise ValueError("Provide either steam_path or install_dir, not both")
@@ -52,12 +53,16 @@ class SteamInstallResolver:
             )
 
     @classmethod
-    def from_install_dir(cls, app_id: int, install_dir: str) -> "SteamInstallResolver":
-        return cls(app_id, install_dir=install_dir)
+    def from_install_dir(
+        cls, steam_app_id: SteamAppID, install_dir: str
+    ) -> "SteamInstallResolver":
+        return cls(steam_app_id, install_dir=install_dir)
 
     @classmethod
-    def from_steam(cls, app_id: int, steam_path: str) -> "SteamInstallResolver":
-        return cls(app_id, steam_path=steam_path)
+    def from_steam(
+        cls, steam_app_id: SteamAppID, steam_path: str
+    ) -> "SteamInstallResolver":
+        return cls(steam_app_id, steam_path=steam_path)
 
     def get_game_dir(self) -> Path:
         """
@@ -71,10 +76,10 @@ class SteamInstallResolver:
 
         assert self.steamapps_path is not None  # for type checkers
 
-        manifest_path = self.steamapps_path / f"appmanifest_{self.app_id}.acf"
+        manifest_path = self.steamapps_path / f"appmanifest_{self.steam_app_id}.acf"
         if not manifest_path.exists():
             raise FileNotFoundError(
-                f"Manifest not found for App ID {self.app_id}: {manifest_path}"
+                f"Manifest not found for App ID {self.steam_app_id}: {manifest_path}"
             )
 
         with open(manifest_path, encoding="utf-8") as f:
