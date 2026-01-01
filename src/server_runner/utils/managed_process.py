@@ -39,10 +39,10 @@ class ManagedProcess:
             cwd=self.cwd,
             env=self.env,
             shell=self.shell,
-            stdin=sys.stdin,  # allow interactive input
-            stdout=sys.stdout,  # live output
-            stderr=sys.stderr,  # live error output
-            preexec_fn=os.setsid,  # start new session/process group
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            preexec_fn=os.setsid,
             text=True,
         )
 
