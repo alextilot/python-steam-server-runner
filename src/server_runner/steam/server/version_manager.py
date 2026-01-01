@@ -15,8 +15,8 @@ class SteamServerVersionManager:
     and checking for updates.
     """
 
-    def __init__(self, app_id: str | int):
-        self.app_id = str(app_id)
+    def __init__(self, app_id: int):
+        self.app_id = app_id
         self.steamcmd_schema = make_steamcmd_schema(self.app_id)
 
         # SteamCMD commands
