@@ -29,7 +29,7 @@ class GameServerManager:
         """Stop the game server gracefully."""
         log.debug("Stopping server...")
         self.api.stop()
-        self.controller.stop()
+        # self.controller.stop()
 
     def restart(self, auto_update: bool = True) -> None:
         """Restart the game server, optionally auto-updating before restart."""
