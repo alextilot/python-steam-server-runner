@@ -1,4 +1,4 @@
-def make_steamcmd_schema(app_id: str | int):
+def make_steamcmd_schema(app_id: int):
     """
     Generate a JSON schema for SteamCMD API responses for a given app_id.
     """

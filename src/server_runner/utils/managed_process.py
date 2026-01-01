@@ -2,7 +2,9 @@ import os
 import signal
 import subprocess
 import sys
+import time
 from collections.abc import Sequence
+from contextlib import suppress
 from subprocess import Popen
 
 import psutil
@@ -21,7 +23,7 @@ class ManagedProcess:
         self.cwd = cwd
         self.env = env
         self.shell = shell
-        self._proc: Popen | None = None
+        self._proc: Popen[str] | None = None
 
     # ---------- lifecycle ----------
 
@@ -41,22 +43,25 @@ class ManagedProcess:
             stdout=sys.stdout,  # live output
             stderr=sys.stderr,  # live error output
             preexec_fn=os.setsid,  # start new session/process group
+            text=True,
         )
 
-    def terminate(self, timeout: float = 5.0) -> None:
+    def terminate(self, timeout: float = 5.0, sig: int = signal.SIGTERM) -> None:
         """
         Gracefully terminate the process using SIGTERM.
         Falls back to kill() if timeout expires.
         """
-        if not self.is_running():
+        if not self._proc or not self.is_running():
             self._proc = None
             return
 
         try:
-            os.killpg(self._proc.pid, signal.SIGTERM)
+            os.killpg(self._proc.pid, sig)
             self._proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             self.kill()
+        except ProcessLookupError:
+            pass
         finally:
             self._proc = None
 
@@ -64,26 +69,32 @@ class ManagedProcess:
         """
         Kill the process and all child processes using psutil.
         """
-        if not self.is_running():
+        if not self._proc or not self.is_running():
             self._proc = None
             return
 
         try:
             parent = psutil.Process(self._proc.pid)
-            for child in parent.children(recursive=True):
-                child.kill()
-            parent.kill()
+            children = parent.children(recursive=True)
+            for child in children:
+                with suppress(psutil.NoSuchProcess):
+                    child.kill()
+
+            with suppress(psutil.NoSuchProcess):
+                parent.kill()
+                parent.wait(timeout=5)
         except psutil.NoSuchProcess:
             pass
         finally:
             self._proc = None
 
-    def restart(self) -> None:
+    def restart(self, delay: float = 0.5) -> None:
         """
         Restart the process by terminating and starting it again.
         """
         if self.is_running():
             self.terminate()
+            time.sleep(delay)
         self.start()
 
     # ---------- inspection ----------

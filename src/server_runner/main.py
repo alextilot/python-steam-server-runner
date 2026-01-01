@@ -3,7 +3,8 @@ import time
 from server_runner.commandline.commandline import CommandLine
 from server_runner.config.logging import get_logger, setup_logging
 from server_runner.status_manager import StatusManager
-from server_runner.steam.create_game_api import create_game_api
+from server_runner.steam.api.create_game_api import create_game_api
+from server_runner.steam.app.steam_app_id import get_steam_app_id
 from server_runner.steam.game_server_manager import GameServerManager
 from server_runner.steam.server.controller import SteamServerController
 from server_runner.steam.server.install_resolver import SteamInstallResolver
@@ -33,18 +34,20 @@ def main():
     command_line = CommandLine()
     config = command_line.parse_server_config()
 
+    steam_app_id = get_steam_app_id(config.app_id)
+
     resolver = SteamInstallResolver(
-        config.app_id, steam_path=config.steam_path, install_dir=config.install_dir
+        steam_app_id, steam_path=config.steam_path, install_dir=config.install_dir
     )
 
     controller = SteamServerController(
-        config.app_id,
+        steam_app_id,
         resolver,
         config.game_args,
     )
 
     api = create_game_api(
-        app_id=config.app_id, base_url=config.api_base_url, auth_info=config.auth_info
+        steam_app_id, base_url=config.api_base_url, auth_info=config.auth_info
     )
 
     gsm = GameServerManager(controller, api)
