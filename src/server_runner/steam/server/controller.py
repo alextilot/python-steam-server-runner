@@ -1,5 +1,3 @@
-import time
-
 from server_runner.config.logging import get_logger
 from server_runner.steam.app.steam_app_id import SteamAppID
 from server_runner.steam.server.install_resolver import SteamInstallResolver
@@ -52,12 +50,6 @@ class SteamServerController:
             log.info(f"Stopped {self.steam_app_id.name}")
             self.proc = None
 
-    def restart(self, auto_update: bool = False) -> None:
-        if self.proc:
-            self.stop()
-            time.sleep(1)
-        self.start(auto_update=auto_update)
-
     def is_running(self) -> bool:
         return self.proc.is_running() if self.proc else False
 
@@ -70,3 +62,6 @@ class SteamServerController:
         except Exception as e:
             log.error(f"Failed to check for updates: {e}")
             return False
+
+    def update(self) -> None:
+        self.version_manager.update()

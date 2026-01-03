@@ -1,5 +1,8 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
 from server_runner.config.logging import get_logger
-from server_runner.steam.game_server_manager import GameServerManager
+from server_runner.steam.game_server_manager import GameServerManager, ServerState
 
 log = get_logger()
 
@@ -7,86 +10,85 @@ log = get_logger()
 SECONDS_IN_A_MINUTE = 60
 
 
-class Task:
+@dataclass
+class TaskResult:
+    success: bool
+    message: str | None = None
+
+
+class Task(ABC):
     def __init__(self, gsm: GameServerManager):
         self.gsm: GameServerManager = gsm
 
-    def do(self) -> None:
+    @abstractmethod
+    def run(self) -> TaskResult:
         raise NotImplementedError
 
 
 class TaskStart(Task):
-    def do(self) -> None:
-        if not self.gsm.is_running():
-            self.gsm.start()
+    def run(self) -> TaskResult:
+        if self.gsm.state() is ServerState.RUNNING:
+            return TaskResult(True, "Server already running")
+
+        self.gsm.start()
+        return TaskResult(True, "Server started")
 
 
 class TaskStop(Task):
-    def do(self) -> None:
-        self.gsm.save()
-        self.gsm.shutdown("Shuting down ...", 5)
+    def run(self) -> TaskResult:
+        if self.gsm.state() is ServerState.STOPPED:
+            return TaskResult(True, "Server already stopped")
 
-        # Wait for server to shutdown.
-        def not_running():
-            return not self.gsm.is_running()
-
-        self.gsm.wait_for(not_running, 60)
-        if self.gsm.is_running():
-            log.error("Game still running, forcing stop.")
-            self.gsm.force_stop()
-            self.gsm.wait(30)
+        self.gsm.stop()
+        return TaskResult(True, "Server stop requested")
 
 
-class TaskRestartWithUpdate(Task):
-    """Restart the server, applying any available updates."""
-
-    def do(self) -> None:
-        self.gsm.restart(auto_update=True)
+class TaskUpdate(Task):
+    def run(self) -> TaskResult:
+        self.gsm.update()
+        return TaskResult(True, "Update complete")
 
 
 class TaskCountdown(Task):
     def __init__(
-        self, server_action: GameServerManager, title: str, delay_minutes: int = 0
+        self,
+        gsm: GameServerManager,
+        title: str,
+        delay_minutes: int = 0,
     ) -> None:
-        super().__init__(server_action)
+        super().__init__(gsm)
         self.title = title
-        if delay_minutes > 0:
-            self.delay_minutes = delay_minutes - 1
-            self.delay_seconds = SECONDS_IN_A_MINUTE
+        self.total_seconds = delay_minutes * SECONDS_IN_A_MINUTE
+
+    def run(self) -> TaskResult:
+        remaining = self.total_seconds
+
+        checkpoints = [5 * 60, 60, 30, 15]
+
+        for checkpoint in checkpoints:
+            if remaining <= checkpoint:
+                continue
+
+            self._announce(remaining)
+            self.gsm.wait.sleep(remaining - checkpoint)
+            remaining = checkpoint
+
+        while remaining > 0:
+            self._announce(remaining)
+            self.gsm.wait.sleep(15)
+            remaining -= 15
+
+        return TaskResult(True, "Countdown completed")
+
+    def _announce(self, seconds: int) -> None:
+        if seconds >= SECONDS_IN_A_MINUTE:
+            value = seconds // SECONDS_IN_A_MINUTE
+            unit = "minutes"
         else:
-            self.delay_minutes = delay_minutes
-            self.delay_seconds = 0
+            value = seconds
+            unit = "seconds"
 
-    def format(self, minutes: int, seconds: int) -> tuple[int, str]:
-        remainder = seconds // SECONDS_IN_A_MINUTE
-        total_minutes = minutes + remainder
-        if total_minutes > 0:
-            return total_minutes, "minutes"
-        return seconds, "seconds"
-
-    def do(self) -> None:
-        minutes = self.delay_minutes
-        seconds = self.delay_seconds
-        # Countdown every minute.
-        while minutes > 0:
-            value, unit = self.format(minutes, seconds)
-            self.gsm.announce(f"[{self.title}] restarting in {value} {unit}")
-            self.gsm.wait(SECONDS_IN_A_MINUTE)
-            minutes -= 1
-
-        # 1 minute remaining.
-        if seconds == SECONDS_IN_A_MINUTE:
-            value, unit = self.format(minutes, seconds)
-            self.gsm.announce(f"[{self.title}] restarting in {value} {unit}")
-            self.gsm.wait(15)
-            seconds -= 15
-
-        # Countdown every 15 seconds.
-        while seconds >= 0:
-            value, unit = self.format(minutes, seconds)
-            self.gsm.announce(f"[{self.title}] restarting in {value} {unit}")
-            self.gsm.wait(15)
-            seconds -= 15
+        self.gsm.announce(f"[{self.title}] restarting in {value} {unit}")
 
 
 class TaskFactory:
@@ -99,8 +101,8 @@ class TaskFactory:
     def stop(self) -> TaskStop:
         return TaskStop(self.gsm)
 
-    def restart_with_update(self) -> TaskRestartWithUpdate:
-        return TaskRestartWithUpdate(self.gsm)
+    def update(self) -> TaskUpdate:
+        return TaskUpdate(self.gsm)
 
     def countdown(self, title: str, minute_delay: int = 0) -> TaskCountdown:
         return TaskCountdown(self.gsm, title, minute_delay)

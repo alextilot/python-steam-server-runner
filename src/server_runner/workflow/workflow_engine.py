@@ -7,7 +7,9 @@ from typing import Literal, TypedDict
 import schedule  # type: ignore[reportUnknownMemberType]
 
 from server_runner.config.logging import get_logger
-from server_runner.status_manager import StatusManager
+from server_runner.steam.game_server_manager import GameServerManager, ServerState
+from server_runner.utils.system_metrics import SystemMetrics
+from server_runner.workflow.job_definitions import JobDef, JobID
 from server_runner.workflow.workflow_catalog import WorkflowCatalog
 from server_runner.workflow.workflow_job import WorkflowJob
 from server_runner.workflow.workflow_queue import WorkflowQueue
@@ -22,26 +24,22 @@ class ScheduleEntry(TypedDict):
     interval: Literal["minute", "hour", "day"]
 
 
-# Reusable type alias
-JobCatalog = WorkflowCatalog[str, WorkflowJob]
-
-
 class WorkflowEngine:
     """Engine to schedule, enqueue, and execute workflow jobs."""
 
     def __init__(
         self,
-        status: StatusManager,
-        jobs: JobCatalog,
+        gsm: GameServerManager,
+        system: SystemMetrics,
+        catalog: WorkflowCatalog[JobID, WorkflowJob],
     ):
-        self.status = status
-        self.jobs = jobs
+        self.gsm = gsm
+        self.system = system
+        self.catalog = catalog
         self.queue: WorkflowQueue = WorkflowQueue()
 
-        # Sentinel WorkflowJob to signal shutdown
-        self._sentinel: WorkflowJob = WorkflowJob.sentinel()
-
         self._stop_event = threading.Event()
+        self._sentinel: WorkflowJob = WorkflowJob.sentinel()
 
         # Threads
         self._consumer_thread = threading.Thread(
@@ -54,56 +52,41 @@ class WorkflowEngine:
     # ------------------------
     # Scheduler Helpers
     # ------------------------
-    def _get_schedule_map(self) -> list[ScheduleEntry]:
-        """Return the schedule configuration."""
-        return [
-            {
-                "times": [":00"],
-                "job_id": "start",
-                "condition": self.status.is_game_stopped,
-                "interval": "minute",
-            },
-            {
-                "times": [":00", ":10", ":20", ":30", ":40", ":50"],
-                "job_id": "oom",
-                "condition": self.status.has_memory_leak,
-                "interval": "hour",
-            },
-            {
-                "times": [":00", ":15", ":30", ":45"],
-                "job_id": "update",
-                "condition": self.status.is_update_available,
-                "interval": "hour",
-            },
-            {
-                "times": ["05:45"],
-                "job_id": "restart",
-                "condition": self.status.is_game_running,
-                "interval": "day",
-            },
-        ]
+    def _schedule_job(self, job_id: JobID, schedule_info: JobDef["schedule"]) -> None:
+        """Schedule a single job from its job definition if schedule info exists."""
+        if not schedule_info:
+            return  # no schedule for this job
 
-    def _schedule_job(self, entry: ScheduleEntry) -> None:
-        """Schedule a single job based on its entry and interval."""
+        times = schedule_info.get("times", [])
+        interval = schedule_info.get("interval")
+        condition: Callable[[], bool] = schedule_info.get(
+            "condition", lambda: True
+        )  # default always true
+
+        if not interval or not times:
+            return  # invalid schedule
 
         def conditional_job():
             try:
-                if entry["condition"]():
-                    job = self.jobs.get(entry["job_id"])
+                if condition():
+                    job = self.catalog.get(job_id)
                     if job:
                         self.queue.enqueue(job)
             except Exception as e:
-                log.error(
-                    f"Error evaluating condition for job '{entry['job_id']}': {e}"
-                )
+                log.error(f"Error evaluating schedule for job '{job_id}': {e}")
 
-        for t in entry["times"]:
-            if entry["interval"] == "minute":
+        for t in times:
+            if interval == "minute":
                 schedule.every().minutes.at(t).do(conditional_job)
-            elif entry["interval"] == "hour":
+            elif interval == "hour":
                 schedule.every().hour.at(t).do(conditional_job)
-            elif entry["interval"] == "day":
+            elif interval == "day":
                 schedule.every().day.at(t).do(conditional_job)
+
+    def _setup_schedules(self) -> None:
+        """Iterate all job definitions and schedule the ones with schedule info."""
+        for job_id, job_def in self.job_defs.items():
+            self._schedule_job(job_id, job_def.get("schedule"))
 
     # ------------------------
     # Scheduler (Producer)
@@ -127,22 +110,22 @@ class WorkflowEngine:
         """Consume workflow jobs from the queue and execute them."""
         while True:
             try:
-                item: WorkflowJob = self.queue.get(
+                job: WorkflowJob = self.queue.get(
                     timeout=1
                 )  # blocks until item or timeout
             except queue.Empty:
                 continue  # loop back without busy-waiting
 
-            if item.is_sentinel:
+            if job.is_sentinel:
                 self.queue.task_done()
                 log.debug("Sentinel WorkflowJob found... exiting consumer")
                 break
 
             try:
-                log.info(f"Running: {item}")
-                item.run_all()
-                log.info(f"Completed: {item}")
-                self.queue.prune_lower_priority(item)
+                log.info(f"Running job: {job}")
+                job.run_all()
+                log.info(f"Completed job: {job}")
+                self.queue.prune_lower_priority(job)
             finally:
                 self.queue.task_done()
 
@@ -164,3 +147,22 @@ class WorkflowEngine:
         self._scheduler_thread.join()
         self._consumer_thread.join()
         log.debug("WorkflowEngine stopped")
+
+    def enqueue_job(self, job_name: str) -> bool:
+        """
+        Enqueue a job by name.
+
+        Args:
+            job_name: The identifier of the job in the catalog.
+
+        Returns:
+            True if the job was enqueued successfully, False if not found.
+        """
+        job = self.catalog.get(job_name)
+        if not job:
+            log.warning(f"Job '{job_name}' not found in catalog")
+            return False
+
+        self.queue.enqueue(job)
+        log.info(f"Job '{job_name}' enqueued")
+        return True
