@@ -7,7 +7,7 @@ from typing import Literal, TypedDict
 import schedule  # type: ignore[reportUnknownMemberType]
 
 from server_runner.config.logging import get_logger
-from server_runner.steam.game_server_manager import GameServerManager, ServerState
+from server_runner.steam.game_server_manager import GameServerManager
 from server_runner.utils.system_metrics import SystemMetrics
 from server_runner.workflow.job_definitions import JobDef, JobID
 from server_runner.workflow.workflow_catalog import WorkflowCatalog

@@ -1,4 +1,4 @@
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 from server_runner.config.logging import get_logger
 
@@ -8,7 +8,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class WorkflowCatalog(Generic[K, V]):
+class WorkflowCatalog[K, V]:
     """
     A registry mapping workflow identifiers to factory functions or handlers.
     Useful for looking up workflow types, builders, or actions.

@@ -40,7 +40,7 @@ class SteamServerController:
             log.info(f"Auto-update enabled, updating {self.steam_app_id.name}...")
             self.version_manager.update()
 
-        self.proc = ManagedProcess(self.game_cmd, shell=True)
+        self.proc = ManagedProcess(self.game_cmd)
         self.proc.start()
         log.info(f"Started {self.steam_app_id.name} (PID {self.pid()})")
 
