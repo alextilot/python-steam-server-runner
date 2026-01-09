@@ -37,7 +37,7 @@ check-python-version:
 # Setup pyenv environment
 # -------------------------------
 setup: check-python-version
-	@PYTHON_VERSION=$$(cat .python-version)
+	@PYTHON_VERSION=$$(cat .python-version-base 2>/dev/null || echo "3.12.11")
 	@echo "Installing Python $$PYTHON_VERSION via pyenv..."
 	@pyenv install -s $$PYTHON_VERSION
 	@pyenv virtualenv -f $$PYTHON_VERSION $(VENV_NAME)
@@ -84,14 +84,13 @@ ci: check
 # -------------------------------
 # Cleanup
 # -------------------------------
-clean:
-	@echo "Deleting pyenv virtualenv $(VENV_NAME) and all caches..."
-	@pyenv virtualenv-delete -f $(VENV_NAME) || true
+clean: clean-env
+	@echo "Deleting all caches..." 
 	@rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
-	@echo "Cleanup complete. .python-version preserved."
+	@echo "Caches deleted."
 
 clean-env:
 	@echo "Deleting pyenv virtualenv $(VENV_NAME)..."
 	@pyenv virtualenv-delete -f $(VENV_NAME) || true
-	@echo "Python environment deleted. .python-version preserved."
+	@echo "Python environment deleted."
