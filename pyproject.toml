@@ -123,7 +123,7 @@ exclude = [
 
 # Basic configuration
 typeCheckingMode = "strict"
-pythonVersion = "3.13"                 # Match Ruff 
+pythonVersion = "3.12"                 # Match Ruff 
 pythonPlatform = "All"
 
 # Specify the virtual environment path
