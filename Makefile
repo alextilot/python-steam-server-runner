@@ -1,51 +1,97 @@
-PYTHON_VERSION ?= 3.13
+# -------------------------------
+# Config
+# -------------------------------
 VENV_NAME ?= server-runner
 
-.DEFAULT_GOAL := all
-.PHONY: all setup install test clean lint format
+SRC := src
+TESTS := tests
 
-all: install lint test
+.DEFAULT_GOAL := help
+.PHONY: help setup install dev lint format typecheck test check ci clean
 
-setup:
-	@echo "Setting up Python environment..."
-	@pyenv install -s $(PYTHON_VERSION)
-	@pyenv virtualenv -f $(PYTHON_VERSION) $(VENV_NAME)
+# -------------------------------
+# Help
+# -------------------------------
+help:
+	@echo ""
+	@echo "Targets:"
+	@echo "  setup      Install Python + pyenv virtualenv"
+	@echo "  install    Install runtime dependencies"
+	@echo "  dev        Install dev dependencies + editable mode"
+	@echo "  lint       Ruff + Black checks"
+	@echo "  format     Auto-format code"
+	@echo "  typecheck  Pyright"
+	@echo "  test       Run pytest"
+	@echo "  check      Lint + typecheck + test"
+	@echo "  ci         Same as check"
+	@echo "  clean      Remove pyenv virtualenv (optional)"
+	@echo ""
+
+# -------------------------------
+# Ensure .python-version exists
+# -------------------------------
+check-python-version:
+	@test -f .python-version || (echo "Error: .python-version file not found. Please create it with the Python version for pyenv." && exit 1)
+
+# -------------------------------
+# Setup pyenv environment
+# -------------------------------
+setup: check-python-version
+	@PYTHON_VERSION=$$(cat .python-version)
+	@echo "Installing Python $$PYTHON_VERSION via pyenv..."
+	@pyenv install -s $$PYTHON_VERSION
+	@pyenv virtualenv -f $$PYTHON_VERSION $(VENV_NAME)
 	@pyenv local $(VENV_NAME)
-	@echo "Python environment setup complete. Run 'make install' to install dependencies."
+	@echo "Pyenv environment '$(VENV_NAME)' created."
+	@echo "Python path: $$(pyenv which python)"
+	@echo "Run 'make install' or 'make dev' next."
 
-install: setup
-	@echo "Installing dependencies..."
+
+# -------------------------------
+# Dependencies
+# -------------------------------
+install:
+	@echo "Installing runtime dependencies..."
 	@python -m pip install --upgrade pip
-	@python -m pip install -r requirements.txt
-	@python -m pip install -r requirements-dev.txt
-	@echo "Dependencies installed."
+	@python -m pip install .
+	@echo "Done."
 
-# New target for editable/dev install
-dev-install: install
-	@echo "Installing package in editable mode..."
-	@python -m pip install -e .
-	@echo "Editable install complete. You can now run 'server-runner' from anywhere."
+dev: install
+	@echo "Installing dev dependencies + editable mode..."
+	@python -m pip install -e ".[dev]"
+	@echo "Done."
 
+# -------------------------------
+# Quality Gates
+# -------------------------------
 lint:
-	@echo "Running linter..."
-	@ruff check src tests
-	@black --check src tests
-	@echo "Linting complete."
+	@ruff check $(SRC) $(TESTS)
+	@black --check $(SRC) $(TESTS)
 
 format:
-	@echo "Formatting code..."
-	@black src tests
-	@ruff --fix src tests
-	@echo "Code formatted."
+	@ruff check --fix $(SRC) $(TESTS)
+	@black $(SRC) $(TESTS)
+
+typecheck:
+	@pyright
 
 test:
-	@echo "Running tests..."
-	@python -m pytest tests
-	@echo "Tests complete."
+	@python -m pytest $(TESTS)
 
+check: lint typecheck test
+ci: check
+
+# -------------------------------
+# Cleanup
+# -------------------------------
 clean:
-	@echo "Cleaning up..."
-	@rm -rf $(VENV_NAME)
-	@pyenv virtualenv-delete $(VENV_NAME) || true
-	@rm -f .python-version
-	@echo "Cleanup complete."
+	@echo "Deleting pyenv virtualenv $(VENV_NAME) and all caches..."
+	@pyenv virtualenv-delete -f $(VENV_NAME) || true
+	@rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage
+	@find . -type d -name "__pycache__" -exec rm -rf {} +
+	@echo "Cleanup complete. .python-version preserved."
+
+clean-env:
+	@echo "Deleting pyenv virtualenv $(VENV_NAME)..."
+	@pyenv virtualenv-delete -f $(VENV_NAME) || true
+	@echo "Python environment deleted. .python-version preserved."

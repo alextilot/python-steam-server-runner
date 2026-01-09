@@ -1,5 +1,13 @@
 [project]
-authors = [{ email = "alextilot@gmail.com", name = "Alex Tilot" }]
+name = "steam-server-runner"
+description = "Python steam server runner."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Alex Tilot", email = "alextilot@gmail.com" }]
+
+requires-python = ">=3.10,<4"
+dynamic = ["version"]
+
 classifiers = [
   "Natural Language :: English",
   "Programming Language :: Python :: 3",
@@ -9,23 +17,27 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
   "Typing :: Typed",
 ]
-dependencies = []
-description = "Python steam server runner."
-dynamic = ["version"]
-license = "MIT"
-name = "steam-server-runner"
-readme = "README.md"
-requires-python = ">=3.10,<4"
+
+dependencies = [
+    "psutil",
+    "schedule",
+    "requests",
+    "jsonschema",
+    "python-dotenv",
+    "prompt-toolkit",
+    "vdf",
+]
 
 [project.optional-dependencies]
-checks = ["mypy==1.9.0", "ruff>=0.3,<0.4"]
-docs = ["mkdocs-material>=9,<10"]
-tests = [
-  "coverage[toml]>=7,<8",
-  "httpx>=0.23,<1",
-  "pytest>=7,<8",
-  "pytest-mock>=3,<4",
+dev = [
+  "pytest",
+  "pytest-mock",
+  "coverage[toml]",
+  "ruff",
+  "black",
+  "pyright",
 ]
+docs = ["mkdocs-material>=9,<10"]
 
 [project.scripts]
 server-runner = "server_runner.main:main"
@@ -55,7 +67,7 @@ fix = true
 
 # Target Python 3.11+ syntax (recommended for 2025)
 # Options: py38, py39, py310, py311, py312, py313, py314
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 # Enable comprehensive rule sets
@@ -72,8 +84,6 @@ select = [
     "S",    # flake8-bandit (security)
     "T20",  # flake8-print
 ]
-
-# Never ignore these critical errors
 ignore = [
     "E501",  # Line too long (handled by formatter)
     "S101",  # Use of assert (acceptable in tests)
@@ -91,14 +101,10 @@ quote-style = "double"
 
 # Ensure imports are properly sorted
 [tool.ruff.lint.isort]
-# TODO: Replace "your_package_name" with the actual name of your package in the following section.
 known-first-party = ["server_runner"]
 
 [tool.pyright]
 include = ["src"]
-executionEnvironments = [
-  { root = "src" }
-]
 exclude = [
     "**/__pycache__",           # Python bytecode cache
     "**/.git",                  # Git repository data
@@ -121,8 +127,8 @@ pythonVersion = "3.13"                 # Match Ruff
 pythonPlatform = "All"
 
 # Specify the virtual environment path
-venvPath = "~/.pyenv/versions"
-venv = "server-runner"
+# venvPath = "~/.pyenv/versions"
+# venv = "server-runner"
 
 
 # Additional strict checks beyond default strict mode
