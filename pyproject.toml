@@ -67,7 +67,7 @@ fix = true
 
 # Target Python 3.11+ syntax (recommended for 2025)
 # Options: py38, py39, py310, py311, py312, py313, py314
-target-version = "py314"
+target-version = "py312"
 
 [tool.ruff.lint]
 # Enable comprehensive rule sets
