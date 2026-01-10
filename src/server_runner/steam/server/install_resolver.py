@@ -14,7 +14,7 @@ class SteamInstallResolver:
     Resolves the installation directory of a Steam game.
 
     Exactly one of steam_path or install_dir must be provided:
-    - steam_path: SteamCMD root for manifest-based resolution
+    - steam_path: Steam root for manifest-based resolution
     - install_dir: explicit game directory (force_install_dir)
     """
 

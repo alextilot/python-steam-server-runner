@@ -1,7 +1,6 @@
 import os
 import signal
 import subprocess
-import sys
 import time
 from collections.abc import Sequence
 from contextlib import suppress
@@ -17,12 +16,10 @@ class ManagedProcess:
         *,
         cwd: str | None = None,
         env: dict[str, str] | None = None,
-        shell: bool = False,
     ):
         self.command = command
         self.cwd = cwd
         self.env = env
-        self.shell = shell
         self._proc: Popen[str] | None = None
 
     # ---------- lifecycle ----------
@@ -34,17 +31,19 @@ class ManagedProcess:
         if self.is_running():
             raise RuntimeError("Process already started")
 
-        self._proc = subprocess.Popen(
+        self._proc = subprocess.Popen(  # noqa: S603
             self.command,
             cwd=self.cwd,
             env=self.env,
-            shell=self.shell,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             preexec_fn=os.setsid,
             text=True,
         )
+
+    # S603: self.command is trusted and controlled by the caller.
+    # ManagedProcess is a general-purpose process runner; inputs are not user-controlled.
 
     def terminate(self, timeout: float = 5.0, sig: int = signal.SIGTERM) -> None:
         """

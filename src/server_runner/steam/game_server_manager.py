@@ -1,91 +1,109 @@
-import time
-from collections.abc import Callable
+from enum import Enum, auto
 
 from server_runner.config.logging import get_logger
 from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
 from server_runner.steam.server.controller import SteamServerController
+from server_runner.utils.wait import Wait
 
 log = get_logger()
 
 
+class StopMode(Enum):
+    GRACEFUL = auto()
+    FORCE = auto()
+
+
+class ServerState(Enum):
+    STOPPED = auto()
+    RUNNING = auto()
+    STOPPING = auto()
+    UNKNOWN = auto()
+
+
 class GameServerManager:
+    ServerState = ServerState
+    StopMode = StopMode
     """
     High-level interface for managing a game server instance,
     including process lifecycle and API interactions.
     """
 
-    def __init__(self, controller: SteamServerController, api: RESTSteamServerAPI):
+    def __init__(
+        self, controller: SteamServerController, api: RESTSteamServerAPI, wait: Wait
+    ):
         self.controller = controller
         self.api = api
-
-    # ---------- Lifecycle Management ----------
+        self.wait = wait
 
     def start(self) -> None:
         """Start the game server."""
-        log.debug("Starting server...")
+        if self.controller.is_running():
+            log.warning("Server already running")
+            return
         self.controller.start()
 
-    def stop(self) -> None:
-        """Stop the game server gracefully."""
-        log.debug("Stopping server...")
-        self.api.stop()
-        # self.controller.stop()
+    def stop(self, mode: StopMode = StopMode.GRACEFUL, timeout: int = 60) -> None:
+        """Stop the game server, waiting for it to stop, optionally forcing if needed."""
+        if not self.controller.is_running():
+            log.info("Server already stopped")
+            return
 
-    def restart(self, auto_update: bool = True) -> None:
-        """Restart the game server, optionally auto-updating before restart."""
-        log.debug(f"Restarting server (auto_update={auto_update})...")
-        self.controller.restart(auto_update=auto_update)
+        if mode is StopMode.FORCE:
+            log.info("Force stop requested")
+            self.controller.stop()
+            return
 
-    def is_running(self) -> bool:
-        """Return True if the server process is running."""
-        return self.controller.is_running()
-
-    def is_update_available(self) -> bool:
-        """Return True if the server process is running."""
-        return self.controller.is_update_available()
-
-    def force_stop(self) -> None:
-        """Force stop the server immediately."""
-        log.debug("Force stopping server...")
-        self.controller.stop()
-
-    # ---------- API Actions ----------
-
-    def announce(self, message: str) -> None:
-        """Send an announcement via the game API."""
-        self.api.announce(message)
-
-    def save(self) -> None:
-        """Trigger a server save."""
+        # Graceful shutdown
+        log.debug("Saving server state before graceful shutdown")
         self.api.save()
 
-    def shutdown(self, message: str, delay: int) -> None:
-        """Shutdown the server with a message and delay."""
-        self.api.shutdown(message, delay)
+        log.info("Requesting graceful shutdown via API")
+        self.api.shutdown("Server shutting down", delay=5)
 
-    # ---------- Utilities ----------
+        stopped = self.wait.until(
+            lambda: not self.controller.is_running(), timeout=timeout
+        )
+        if stopped:
+            log.info("Server stopped successfully")
+            return
 
-    def wait(self, seconds: float) -> None:
-        """Sleep for a number of seconds."""
-        time.sleep(seconds)
+        # Graceful failed → force stop
+        log.warning("Server did not stop in time, forcing stop")
+        self.controller.stop()
+        self.wait.until(lambda: not self.controller.is_running(), timeout=30)
+        log.info("Server force-stopped")
 
-    def wait_for(
-        self, condition: Callable[[], bool], timeout: int = 15, interval: float = 1.0
-    ) -> bool:
+    def update(self) -> None:
         """
-        Wait for a condition to become True.
+        Update the server if an update is available.
 
-        Args:
-            condition: Callable returning a boolean.
-            timeout: Maximum time to wait in seconds.
-            interval: How often to check the condition.
-
-        Returns:
-            True if condition became True within timeout, False otherwise.
+        Safe to call at any time. If the server is running, it will be
+        stopped before applying the update.
         """
-        start = time.time()
-        while time.time() - start < timeout:
-            if condition():
-                return True
-            self.wait(interval)
-        return False
+        if not self.controller.is_update_available():
+            log.debug("No server update available")
+            return
+
+        log.info("Server update available")
+
+        self.stop(StopMode.GRACEFUL)
+
+        log.info("Applying server update")
+        self.controller.update()
+
+    def update_available(self) -> bool:
+        return self.controller.is_update_available()
+
+    def state(self) -> ServerState:
+        if self.controller.is_running():
+            return ServerState.RUNNING
+
+        # Future extension: ping API health
+        return ServerState.STOPPED
+
+    def announce(self, message: str) -> bool:
+        if not self.controller.is_running():
+            log.debug("Skipping announce; server not running")
+            return False
+        self.api.announce(message)
+        return True

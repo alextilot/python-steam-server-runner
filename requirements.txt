@@ -1,7 +1,0 @@
-psutil
-schedule
-requests
-jsonschema
-python-dotenv
-prompt_toolkit
-vdf

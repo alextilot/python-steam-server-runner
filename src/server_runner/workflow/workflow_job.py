@@ -44,6 +44,6 @@ class WorkflowJob:
         self._working = True
         try:
             for task in self._tasks:
-                task.do()
+                task.run()
         finally:
             self._working = False

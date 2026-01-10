@@ -1,3 +1,7 @@
+# ruff: noqa: S603
+# S603: subprocess calls in this module execute trusted, internal commands only.
+# Command inputs are not user-controlled and are validated at the call sites.
+
 import subprocess
 
 import requests
@@ -7,6 +11,8 @@ from server_runner.config.logging import get_logger
 from server_runner.steam.server.steamcmd_schema import make_steamcmd_schema
 
 log = get_logger()
+
+STEAMCMD_PATH = "/usr/bin/steamcmd"
 
 
 class SteamServerVersionManager:
@@ -19,26 +25,33 @@ class SteamServerVersionManager:
         self.app_id = app_id
         self.steamcmd_schema = make_steamcmd_schema(self.app_id)
 
-        # SteamCMD commands
-        self.steamcmd_update_info = f"steamcmd +login anonymous +app_info_update 1 +app_status {self.app_id} +quit"
-        self.steamcmd_update_game = (
-            f"steamcmd +login anonymous +app_update {self.app_id} validate +quit"
-        )
-
     def get_current_version(self) -> int | None:
         try:
             process = subprocess.run(
-                f"{self.steamcmd_update_info} | grep -Eo '(BuildID )([0-9]*)' | grep -Eo '[0-9]*'",
-                shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                [
+                    STEAMCMD_PATH,
+                    "+login",
+                    "anonymous",
+                    "+app_info_update",
+                    "1",
+                    "+app_status",
+                    str(self.app_id),
+                    "+quit",
+                ],
+                capture_output=True,
                 text=True,
+                check=True,
             )
-            version = int(process.stdout.strip())
-            return version
-        except ValueError:
-            log.error("ValueError: Cannot convert current version to integer")
-            return None
+
+            for line in process.stdout.splitlines():
+                if "BuildID" in line:
+                    _, build_id = line.split("BuildID", 1)
+                    return int(build_id.strip())
+
+        except (subprocess.CalledProcessError, ValueError) as e:
+            log.error(f"Failed to get current version: {e}")
+
+        return None
 
     def get_latest_version(self) -> int | None:
         url = f"https://api.steamcmd.net/v1/info/{self.app_id}"
@@ -68,16 +81,24 @@ class SteamServerVersionManager:
 
     def update(self) -> bool:
         log.info(f"Updating app {self.app_id} via SteamCMD...")
+
         process = subprocess.run(
-            self.steamcmd_update_game,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            [
+                STEAMCMD_PATH,
+                "+login",
+                "anonymous",
+                "+app_update",
+                str(self.app_id),
+                "validate",
+                "+quit",
+            ],
+            capture_output=True,
             text=True,
         )
-        success = process.returncode == 0
-        if success:
+
+        if process.returncode == 0:
             log.info("Update completed successfully.")
-        else:
-            log.error("Update failed!")
-        return success
+            return True
+
+        log.error(process.stderr.strip() or "Update failed")
+        return False
