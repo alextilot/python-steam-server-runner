@@ -1,13 +1,14 @@
 # -------------------------------
 # Config
 # -------------------------------
-VENV_NAME ?= server-runner
+PYTHON_VERSION := $(shell cat .python-version)
+VENV_DIR := .venv
 
 SRC := src
 TESTS := tests
 
 .DEFAULT_GOAL := help
-.PHONY: help setup install dev lint format typecheck test check ci clean
+.PHONY: help setup install dev lint format typecheck test check ci clean clean-env
 
 # -------------------------------
 # Help
@@ -15,68 +16,66 @@ TESTS := tests
 help:
 	@echo ""
 	@echo "Targets:"
-	@echo "  setup      Install Python + pyenv virtualenv"
+	@echo "  setup      Ensure Python version + create venv"
 	@echo "  install    Install runtime dependencies"
-	@echo "  dev        Install dev dependencies + editable mode"
+	@echo "  dev        Install dev dependencies (editable)"
 	@echo "  lint       Ruff + Black checks"
 	@echo "  format     Auto-format code"
 	@echo "  typecheck  Pyright"
 	@echo "  test       Run pytest"
 	@echo "  check      Lint + typecheck + test"
 	@echo "  ci         Same as check"
-	@echo "  clean      Remove pyenv virtualenv (optional)"
+	@echo "  clean      Remove caches"
+	@echo "  clean-env  Remove virtual environment"
 	@echo ""
 
 # -------------------------------
-# Ensure .python-version exists
+# Guards
 # -------------------------------
 check-python-version:
-	@test -f .python-version || (echo "Error: .python-version file not found. Please create it with the Python version for pyenv." && exit 1)
+	@test -f .python-version || (echo "Error: .python-version not found" && exit 1)
+
+check-python:
+	@python --version | grep -q "$(PYTHON_VERSION)" || \
+	(echo "Error: active Python is not $(PYTHON_VERSION)" && exit 1)
 
 # -------------------------------
-# Setup pyenv environment
+# Setup
 # -------------------------------
 setup: check-python-version
-	@PYTHON_VERSION=$$(cat .python-version-base 2>/dev/null || echo "3.12.11")
-	@echo "Installing Python $$PYTHON_VERSION via pyenv..."
-	@pyenv install -s $$PYTHON_VERSION
-	@pyenv virtualenv -f $$PYTHON_VERSION $(VENV_NAME)
-	@pyenv local $(VENV_NAME)
-	@echo "Pyenv environment '$(VENV_NAME)' created."
-	@echo "Python path: $$(pyenv which python)"
-	@echo "Run 'make install' or 'make dev' next."
-
+	@echo "Using Python $(PYTHON_VERSION)"
+	@pyenv install -s $(PYTHON_VERSION)
+	@pyenv local $(PYTHON_VERSION)
+	@test -d $(VENV_DIR) || python -m venv $(VENV_DIR)
+	@echo "Virtualenv created at $(VENV_DIR)"
+	@echo "Activate with: source $(VENV_DIR)/bin/activate"
 
 # -------------------------------
 # Dependencies
 # -------------------------------
-install:
-	@echo "Installing runtime dependencies..."
-	@python -m pip install --upgrade pip
-	@python -m pip install .
-	@echo "Done."
+install: check-python
+	@$(VENV_DIR)/bin/python -m pip install --upgrade pip
+	@$(VENV_DIR)/bin/python -m pip install .
 
 dev: install
-	@echo "Installing dev dependencies + editable mode..."
-	@python -m pip install -e ".[dev]"
-	@echo "Done."
+	@$(VENV_DIR)/bin/python -m pip install -e ".[dev]"
 
 # -------------------------------
 # Quality Gates
 # -------------------------------
 lint:
-	@ruff check $(SRC) $(TESTS)
-	@black --check $(SRC) $(TESTS)
+	@$(VENV_DIR)/bin/ruff check $(SRC) $(TESTS)
+	@$(VENV_DIR)/bin/black --check $(SRC) $(TESTS)
 
 format:
-	@ruff check --fix $(SRC) $(TESTS)
-	@black $(SRC) $(TESTS)
+	@$(VENV_DIR)/bin/ruff check --fix $(SRC) $(TESTS)
+	@$(VENV_DIR)/bin/black $(SRC) $(TESTS)
 
 typecheck:
-	@pyright
+	@$(VENV_DIR)/bin/pyright
 
 test:
-	@python -m pytest $(TESTS)
+	@$(VENV_DIR)/bin/python -m pytest $(TESTS)
 
 check: lint typecheck test
 ci: check
@@ -84,13 +83,11 @@ ci: check
 # -------------------------------
 # Cleanup
 # -------------------------------
-clean: clean-env
-	@echo "Deleting all caches..." 
+clean:
 	@rm -rf .pytest_cache .ruff_cache .mypy_cache .coverage
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
-	@echo "Caches deleted."
 
 clean-env:
-	@echo "Deleting pyenv virtualenv $(VENV_NAME)..."
-	@pyenv virtualenv-delete -f $(VENV_NAME) || true
-	@echo "Python environment deleted."
+	@rm -rf $(VENV_DIR)
+	@echo "Virtual environment removed"
+

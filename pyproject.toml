@@ -5,14 +5,12 @@ readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Alex Tilot", email = "alextilot@gmail.com" }]
 
-requires-python = ">=3.10,<4"
+requires-python = ">=3.12,<4"
 dynamic = ["version"]
 
 classifiers = [
   "Natural Language :: English",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Typing :: Typed",
@@ -121,14 +119,14 @@ exclude = [
     ".DS_Store"                 # macOS system files
 ]
 
+# Specify the virtual environment path
+# venv = ".venv"
+# venvPath = "."
+
 # Basic configuration
 typeCheckingMode = "strict"
 pythonVersion = "3.12"                 # Match Ruff 
 pythonPlatform = "All"
-
-# Specify the virtual environment path
-# venvPath = "~/.pyenv/versions"
-# venv = "server-runner"
 
 
 # Additional strict checks beyond default strict mode
