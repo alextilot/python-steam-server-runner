@@ -17,25 +17,24 @@ classifiers = [
 ]
 
 dependencies = [
-    "psutil",
-    "schedule",
-    "requests",
-    "jsonschema",
-    "python-dotenv",
-    "prompt-toolkit",
-    "vdf",
+"psutil",
+"schedule",
+"requests",
+"jsonschema",
+"python-dotenv",
+"prompt_toolkit",
+"vdf"
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest",
-  "pytest-mock",
-  "coverage[toml]",
+  "pytest>=7,<8",
+  "pytest-mock>=3,<4",
+  "coverage[toml]>=7,<8",
   "ruff",
   "black",
   "pyright",
 ]
-docs = ["mkdocs-material>=9,<10"]
 
 [project.scripts]
 server-runner = "server_runner.main:main"
@@ -54,6 +53,10 @@ source = ["server-runner", "tests"]
 addopts = "-q"
 minversion = "6.0"
 testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+    "integration: tests that spawn real OS processes"
+]
 
 
 [tool.ruff]
@@ -65,7 +68,7 @@ fix = true
 
 # Target Python 3.11+ syntax (recommended for 2025)
 # Options: py38, py39, py310, py311, py312, py313, py314
-target-version = "py312"
+target-version = "py313"
 
 [tool.ruff.lint]
 # Enable comprehensive rule sets
@@ -82,6 +85,8 @@ select = [
     "S",    # flake8-bandit (security)
     "T20",  # flake8-print
 ]
+
+# Never ignore these critical errors
 ignore = [
     "E501",  # Line too long (handled by formatter)
     "S101",  # Use of assert (acceptable in tests)
@@ -99,10 +104,14 @@ quote-style = "double"
 
 # Ensure imports are properly sorted
 [tool.ruff.lint.isort]
+# TODO: Replace "your_package_name" with the actual name of your package in the following section.
 known-first-party = ["server_runner"]
 
 [tool.pyright]
 include = ["src"]
+executionEnvironments = [
+  { root = "src" }
+]
 exclude = [
     "**/__pycache__",           # Python bytecode cache
     "**/.git",                  # Git repository data
@@ -119,14 +128,16 @@ exclude = [
     ".DS_Store"                 # macOS system files
 ]
 
-# Specify the virtual environment path
-# venv = ".venv"
-# venvPath = "."
-
 # Basic configuration
 typeCheckingMode = "strict"
-pythonVersion = "3.12"                 # Match Ruff 
+pythonVersion = "3.13"                 # Match Ruff 
 pythonPlatform = "All"
+
+# Specify the virtual environment path
+venvPath = "."
+venv = ".venv"
+# venvPath = "~/.pyenv/versions"
+# venv = "server-runner"
 
 
 # Additional strict checks beyond default strict mode

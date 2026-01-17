@@ -42,9 +42,6 @@ class ManagedProcess:
             text=True,
         )
 
-    # S603: self.command is trusted and controlled by the caller.
-    # ManagedProcess is a general-purpose process runner; inputs are not user-controlled.
-
     def terminate(self, timeout: float = 5.0, sig: int = signal.SIGTERM) -> None:
         """
         Gracefully terminate the process using SIGTERM.
