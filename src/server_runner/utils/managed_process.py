@@ -5,6 +5,7 @@ import time
 from collections.abc import Sequence
 from contextlib import suppress
 from subprocess import Popen
+from typing import IO
 
 import psutil
 
@@ -21,6 +22,7 @@ class ManagedProcess:
         self.cwd = cwd
         self.env = env
         self._proc: Popen[str] | None = None
+        self._exit_code: int | None = None
 
     # ---------- lifecycle ----------
 
@@ -54,6 +56,7 @@ class ManagedProcess:
         try:
             os.killpg(self._proc.pid, sig)
             self._proc.wait(timeout=timeout)
+            self._exit_code = self._proc.returncode
         except subprocess.TimeoutExpired:
             self.kill()
         except ProcessLookupError:
@@ -108,9 +111,9 @@ class ManagedProcess:
         """
         Return the exit code if the process has finished, otherwise None.
         """
-        if not self.is_running():
-            return self._proc.poll() if self._proc else None
-        return None
+        if self._proc is not None:
+            return self._proc.poll()
+        return self._exit_code
 
     def pid(self) -> int | None:
         """
@@ -119,3 +122,19 @@ class ManagedProcess:
         if self.is_running() and self._proc:
             return self._proc.pid
         return None
+
+    # ---------- interaction ----------
+    def stdin(self) -> IO[str] | None:
+        """
+        Return the stdin pipe of the process if available.
+        Allows writing text input to the process.
+        """
+        return self._proc.stdin if self._proc else None
+
+    def stdout(self) -> IO[str] | None:
+        """Return the process stdout stream if available."""
+        return self._proc.stdout if self._proc else None
+
+    def stderr(self) -> IO[str] | None:
+        """Return the process stderr stream if available."""
+        return self._proc.stderr if self._proc else None
