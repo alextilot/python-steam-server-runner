@@ -3,7 +3,6 @@ from enum import Enum, auto
 from typing import Literal, TypedDict
 
 from server_runner.steam.game_server_manager import GameServerManager
-from server_runner.utils.system_metrics import SystemMetrics
 from server_runner.workflow.tasks import Task, TaskFactory
 
 
@@ -44,11 +43,8 @@ class JobDef(TypedDict):
 JobDefs = dict[JobID, JobDef]  # <-- use enum as key
 
 
-def get_job_definitions(
-    gsm: GameServerManager, system: SystemMetrics | None = None
-) -> JobDefs:
+def get_job_definitions(gsm: GameServerManager) -> JobDefs:
     tf = TaskFactory(gsm)
-    system = system or type("DummySystem", (), {"is_out_of_memory": lambda: False})()
 
     return {
         JobID.START: {
@@ -88,7 +84,7 @@ def get_job_definitions(
             "schedule": {
                 "times": [":00", ":10", ":20", ":30", ":40", ":50"],
                 "interval": "hour",
-                "condition": lambda: system.is_out_of_memory(),
+                "condition": lambda: gsm.is_out_of_memory(),
             },
         },
         JobID.UPDATE: {

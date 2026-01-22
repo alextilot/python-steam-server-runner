@@ -123,6 +123,19 @@ class ManagedProcess:
             return self._proc.pid
         return None
 
+    def get_process_memory_percent(self) -> float:
+        """
+        Return the percentage (%) of total memory used by the process
+        result = (process_memory / total_system_memory)
+        """
+
+        pid = self.pid()
+        if not self._proc:
+            return 0.0
+
+        process = psutil.Process(pid)
+        return process.memory_percent()
+
     # ---------- interaction ----------
     def stdin(self) -> IO[str] | None:
         """

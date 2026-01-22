@@ -6,11 +6,6 @@ import types
 from server_runner.commandline.commandline import CommandLine
 from server_runner.config.logging import get_logger, setup_logging
 from server_runner.steam.gsm_setup import create_game_server_manager
-from server_runner.utils.system_metrics import (
-    SYSTEM_MEMORY_THRESHOLD,
-    SystemMetrics,
-    get_memory_usage_percent,
-)
 from server_runner.workflow.workflow_setup import create_workflow_engine
 
 setup_logging()
@@ -33,8 +28,7 @@ def main():
     config = command_line.parse_server_config()
 
     gsm = create_game_server_manager(config)
-    system = SystemMetrics(SYSTEM_MEMORY_THRESHOLD, get_memory_usage_percent)
-    engine = create_workflow_engine(gsm, system)
+    engine = create_workflow_engine(gsm)
 
     engine.start()
     log.info("Workflow engine started")

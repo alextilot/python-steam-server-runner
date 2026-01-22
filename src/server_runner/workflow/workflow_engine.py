@@ -8,7 +8,6 @@ import schedule  # type: ignore[reportUnknownMemberType]
 
 from server_runner.config.logging import get_logger
 from server_runner.steam.game_server_manager import GameServerManager
-from server_runner.utils.system_metrics import SystemMetrics
 from server_runner.workflow.job_definitions import JobDef, JobID
 from server_runner.workflow.workflow_catalog import WorkflowCatalog
 from server_runner.workflow.workflow_job import WorkflowJob
@@ -30,11 +29,9 @@ class WorkflowEngine:
     def __init__(
         self,
         gsm: GameServerManager,
-        system: SystemMetrics,
         catalog: WorkflowCatalog[JobID, WorkflowJob],
     ):
         self.gsm = gsm
-        self.system = system
         self.catalog = catalog
         self.queue: WorkflowQueue = WorkflowQueue()
 

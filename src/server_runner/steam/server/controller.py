@@ -27,7 +27,7 @@ class SteamServerController:
         self.game_exe = resolver.get_game_executable()
         self.game_cmd = [str(self.game_exe)] + self.server_arguments
 
-        self.proc: ManagedProcess | None = None
+        self.proc = ManagedProcess(self.game_cmd)
         self.version_manager = SteamServerVersionManager(steam_app_id.value)
 
     # ---------- process management ----------
@@ -40,21 +40,21 @@ class SteamServerController:
             log.info(f"Auto-update enabled, updating {self.steam_app_id.name}...")
             self.version_manager.update()
 
-        self.proc = ManagedProcess(self.game_cmd)
         self.proc.start()
         log.info(f"Started {self.steam_app_id.name} (PID {self.pid()})")
 
     def stop(self) -> None:
-        if self.proc:
-            self.proc.terminate(timeout=10)
-            log.info(f"Stopped {self.steam_app_id.name}")
-            self.proc = None
+        self.proc.terminate(timeout=10)
+        log.info(f"Stopped {self.steam_app_id.name}")
 
     def is_running(self) -> bool:
-        return self.proc.is_running() if self.proc else False
+        return self.proc.is_running()
 
     def pid(self) -> int | None:
-        return self.proc.pid() if self.proc else None
+        return self.proc.pid()
+
+    def get_memory_usage(self) -> float:
+        return self.proc.get_process_memory_percent()
 
     def is_update_available(self) -> bool:
         try:

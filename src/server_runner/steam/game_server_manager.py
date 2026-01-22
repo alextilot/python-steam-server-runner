@@ -35,6 +35,9 @@ class GameServerManager:
         self.api = api
         self.wait = wait
 
+    def is_out_of_memory(self) -> bool:
+        return self.controller.get_memory_usage() >= 95.0
+
     def start(self) -> None:
         """Start the game server."""
         if self.controller.is_running():
