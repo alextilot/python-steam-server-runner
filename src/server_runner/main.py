@@ -6,7 +6,7 @@ import types
 from server_runner.commandline.commandline import CommandLine
 from server_runner.config.logging import get_logger, setup_logging
 from server_runner.steam.factory import build_game_server
-from server_runner.workflow.job_ids import JobID
+from server_runner.workflow.job_definitions import JobID
 from server_runner.workflow.workflow_builder import create_workflow_engine
 
 setup_logging()
