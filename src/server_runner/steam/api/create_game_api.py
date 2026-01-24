@@ -1,6 +1,6 @@
 from server_runner.steam.api.api_registry import API_REGISTRY
 from server_runner.steam.api.auth_info import AuthInfo
-from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
+from server_runner.steam.api.games.base_rest_api import RESTSteamServerAPI
 from server_runner.steam.app.steam_app_id import SteamAppID
 
 

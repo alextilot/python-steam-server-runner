@@ -1,7 +1,7 @@
 from enum import Enum, auto
 
 from server_runner.config.logging import get_logger
-from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
+from server_runner.steam.api.games.base_rest_api import RESTSteamServerAPI
 from server_runner.steam.server.controller import SteamServerController
 from server_runner.utils.wait import Wait
 
