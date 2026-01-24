@@ -60,7 +60,7 @@ class SteamServerVersionManager:
             response.raise_for_status()
             data = response.json()
             validate(instance=data, schema=self.steamcmd_schema)
-            buildid = data["data"][self.app_id]["depots"]["branches"]["public"][
+            buildid = data["data"][str(self.app_id)]["depots"]["branches"]["public"][
                 "buildid"
             ]
             latest_version = int(buildid)
