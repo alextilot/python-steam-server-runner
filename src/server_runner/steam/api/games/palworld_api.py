@@ -3,7 +3,10 @@ from typing import Any
 from requests.auth import HTTPBasicAuth
 
 from server_runner.steam.api.auth_info import AuthInfo
-from server_runner.steam.api.rest_api_base import RESTSteamServerAPI
+from server_runner.steam.api.games.base_rest_api import (
+    RESTSteamServerAPI,
+    SteamAPIRequestError,
+)
 
 
 class PalWorldAPI(RESTSteamServerAPI):
@@ -48,6 +51,13 @@ class PalWorldAPI(RESTSteamServerAPI):
     # ------------------------
     # Server Control
     # ------------------------
+    def health_check(self) -> bool:
+        try:
+            self._get("/v1/api/info")
+            return True
+        except SteamAPIRequestError:
+            return False
+
     def announce(self, message: str) -> None:
         """Send a server-wide announcement."""
         self._post("/v1/api/announce", {"message": message})

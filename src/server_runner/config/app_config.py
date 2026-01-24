@@ -3,6 +3,10 @@ from dataclasses import dataclass, field
 
 from dotenv import load_dotenv  # type: ignore[reportUnknownMemberType]
 
+from server_runner.config.logging import get_logger
+
+log = get_logger()
+
 load_dotenv()
 
 
@@ -35,6 +39,6 @@ class AppConfig:
 try:
     app_config = AppConfig.from_env()
 except ValueError as e:
-    print(f"Configuration Error: {e}")
+    log.error("Configuration Error: %s", e)
     # Exit the application cleanly if configuration fails
     exit(1)

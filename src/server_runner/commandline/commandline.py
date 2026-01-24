@@ -52,6 +52,7 @@ class CommandLine:
         self.parseArgs.add_argument(
             "--api-username", type=str, help="Username for basic auth"
         )
+        # Not best practice; It's personal. I accept the risk
         self.parseArgs.add_argument(
             "--api-password", type=str, help="Password for basic auth"
         )

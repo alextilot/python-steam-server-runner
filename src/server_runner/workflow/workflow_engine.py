@@ -2,28 +2,15 @@ import queue
 import threading
 import time
 from collections.abc import Callable
-from typing import Literal, TypedDict
 
-import schedule  # type: ignore[reportUnknownMemberType]
+import schedule  # type: ignore
 
 from server_runner.config.logging import get_logger
-from server_runner.status_manager import StatusManager
-from server_runner.workflow.workflow_catalog import WorkflowCatalog
+from server_runner.steam.managed_game_server import ManagedGameServer
+from server_runner.workflow.job_definitions import JobID, JobSchedule
 from server_runner.workflow.workflow_job import WorkflowJob
-from server_runner.workflow.workflow_queue import WorkflowQueue
 
 log = get_logger()
-
-
-class ScheduleEntry(TypedDict):
-    times: list[str]
-    job_id: str
-    condition: Callable[[], bool]
-    interval: Literal["minute", "hour", "day"]
-
-
-# Reusable type alias
-JobCatalog = WorkflowCatalog[str, WorkflowJob]
 
 
 class WorkflowEngine:
@@ -31,19 +18,18 @@ class WorkflowEngine:
 
     def __init__(
         self,
-        status: StatusManager,
-        jobs: JobCatalog,
+        server: ManagedGameServer,
+        jobs: dict[JobID, WorkflowJob],
+        schedules: dict[JobID, JobSchedule],
     ):
-        self.status = status
+        self.server = server
         self.jobs = jobs
-        self.queue: WorkflowQueue = WorkflowQueue()
-
-        # Sentinel WorkflowJob to signal shutdown
-        self._sentinel: WorkflowJob = WorkflowJob.sentinel()
+        self.schedules = schedules
+        self.queue: queue.Queue[WorkflowJob] = queue.Queue()
 
         self._stop_event = threading.Event()
+        self._sentinel: WorkflowJob = WorkflowJob.sentinel()
 
-        # Threads
         self._consumer_thread = threading.Thread(
             target=self._consumer, name="ConsumerThread", daemon=True
         )
@@ -54,65 +40,44 @@ class WorkflowEngine:
     # ------------------------
     # Scheduler Helpers
     # ------------------------
-    def _get_schedule_map(self) -> list[ScheduleEntry]:
-        """Return the schedule configuration."""
-        return [
-            {
-                "times": [":00"],
-                "job_id": "start",
-                "condition": self.status.is_game_stopped,
-                "interval": "minute",
-            },
-            {
-                "times": [":00", ":10", ":20", ":30", ":40", ":50"],
-                "job_id": "oom",
-                "condition": self.status.has_memory_leak,
-                "interval": "hour",
-            },
-            {
-                "times": [":00", ":15", ":30", ":45"],
-                "job_id": "update",
-                "condition": self.status.is_update_available,
-                "interval": "hour",
-            },
-            {
-                "times": ["05:45"],
-                "job_id": "restart",
-                "condition": self.status.is_game_running,
-                "interval": "day",
-            },
-        ]
+    def _schedule_job(self, job_id: JobID, schedule_info: JobSchedule) -> None:
+        """Schedule a single job using its schedule info."""
+        times = schedule_info.get("times", [])
+        interval = schedule_info.get("interval")
+        condition: Callable[[], bool] = schedule_info.get("condition", lambda: True)
 
-    def _schedule_job(self, entry: ScheduleEntry) -> None:
-        """Schedule a single job based on its entry and interval."""
+        if not interval or not times:
+            return
+
+        job = self.jobs.get(job_id)
+        if not job:
+            log.warning(f"Cannot schedule unknown job '{job_id.name}'")
+            return
 
         def conditional_job():
             try:
-                if entry["condition"]():
-                    job = self.jobs.get(entry["job_id"])
-                    if job:
-                        self.queue.enqueue(job)
+                if condition():
+                    self.queue.put(job)
             except Exception as e:
-                log.error(
-                    f"Error evaluating condition for job '{entry['job_id']}': {e}"
-                )
+                log.error(f"Error evaluating schedule for job '{job.name}': {e}")
 
-        for t in entry["times"]:
-            if entry["interval"] == "minute":
+        for t in times:
+            if interval == "minute":
                 schedule.every().minutes.at(t).do(conditional_job)
-            elif entry["interval"] == "hour":
+            elif interval == "hour":
                 schedule.every().hour.at(t).do(conditional_job)
-            elif entry["interval"] == "day":
+            elif interval == "day":
                 schedule.every().day.at(t).do(conditional_job)
+
+    def _setup_schedules(self):
+        for job_id, schedule_info in self.schedules.items():
+            self._schedule_job(job_id, schedule_info)
 
     # ------------------------
     # Scheduler (Producer)
     # ------------------------
-    def _scheduler(self) -> None:
-        """Continuously run scheduled jobs while engine is active."""
-        for entry in self._get_schedule_map():
-            self._schedule_job(entry)
-
+    def _scheduler(self):
+        self._setup_schedules()
         while not self._stop_event.is_set():
             try:
                 schedule.run_pending()
@@ -123,44 +88,47 @@ class WorkflowEngine:
     # ------------------------
     # Consumer
     # ------------------------
-    def _consumer(self) -> None:
-        """Consume workflow jobs from the queue and execute them."""
+    def _consumer(self):
         while True:
             try:
-                item: WorkflowJob = self.queue.get(
-                    timeout=1
-                )  # blocks until item or timeout
+                job: WorkflowJob = self.queue.get(timeout=1)
             except queue.Empty:
-                continue  # loop back without busy-waiting
+                continue
 
-            if item.is_sentinel:
+            if job.is_sentinel:
                 self.queue.task_done()
                 log.debug("Sentinel WorkflowJob found... exiting consumer")
                 break
 
             try:
-                log.info(f"Running: {item}")
-                item.run_all()
-                log.info(f"Completed: {item}")
-                self.queue.prune_lower_priority(item)
+                log.info(f"Running job: {job}")
+                job.run_all()
+                log.info(f"Completed job: {job}")
             finally:
                 self.queue.task_done()
 
     # ------------------------
     # Public API
     # ------------------------
-    def start(self) -> None:
-        """Start the scheduler and consumer threads."""
+    def start(self):
         log.debug("Starting WorkflowEngine threads")
         self._consumer_thread.start()
         self._scheduler_thread.start()
         log.debug("WorkflowEngine threads started")
 
-    def stop(self) -> None:
-        """Stop the engine by signaling threads and joining them."""
+    def stop(self):
         log.debug("Stopping WorkflowEngine")
-        self._stop_event.set()  # stop scheduler
-        self.queue.enqueue(self._sentinel)  # stop consumer
+        self._stop_event.set()
+        self.queue.put(self._sentinel)
         self._scheduler_thread.join()
         self._consumer_thread.join()
         log.debug("WorkflowEngine stopped")
+
+    def enqueue_job(self, job_id: JobID) -> bool:
+        job = self.jobs.get(job_id)
+        if not job:
+            log.warning(f"Job '{job_id.name}' not found")
+            return False
+        self.queue.put(job)
+        log.info(f"Job '{job.name}' enqueued")
+        return True
