@@ -69,6 +69,11 @@ class RESTSteamServerAPI(ABC):
     # Abstract Server Methods
     # ------------------------
     @abstractmethod
+    def health_check(self) -> bool:
+        """Get server info (health check)"""
+        pass
+
+    @abstractmethod
     def announce(self, message: str) -> None:
         """Send an announcement message to the server."""
         pass

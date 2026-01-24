@@ -1,5 +1,6 @@
 from typing import Any
 
+import requests
 from requests.auth import HTTPBasicAuth
 
 from server_runner.steam.api.auth_info import AuthInfo
@@ -48,6 +49,13 @@ class PalWorldAPI(RESTSteamServerAPI):
     # ------------------------
     # Server Control
     # ------------------------
+    def health_cheack(self) -> bool:
+        try:
+            self._get("/v1/api/info")
+            return True
+        except (requests.exceptions.HTTPError, requests.exceptions.RequestException):
+            return False
+
     def announce(self, message: str) -> None:
         """Send a server-wide announcement."""
         self._post("/v1/api/announce", {"message": message})
