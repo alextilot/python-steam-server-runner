@@ -15,6 +15,10 @@ RequestParams = Mapping[ParamsKey, ParamsValue]
 JsonMapping = Mapping[str, object]
 
 
+class SteamAPIRequestError(RuntimeError):
+    """Raised when a REST request to a Steam server fails."""
+
+
 class RESTSteamServerAPI(ABC):
     """
     Base class for RESTful Steam game APIs.
@@ -27,24 +31,23 @@ class RESTSteamServerAPI(ABC):
         """
         Args:
             base_url: Base URL of the REST API (e.g., "http://localhost:8212").
-            auth: Optional requests-compatible authentication (e.g., HTTPBasicAuth).
+            auth_info: Optional requests-compatible authentication (e.g., HTTPBasicAuth).
             timeout: Request timeout in seconds.
         """
         self.base_url = base_url.rstrip("/")
         self.auth = self._build_auth(auth_info)
         self.timeout = timeout
 
-    @abstractmethod
-    def _build_auth(self, auth_info: AuthInfo | None) -> Any:
-        raise NotImplementedError
-
     # ------------------------
     # HTTP Helpers
     # ------------------------
+    def _full_url(self, endpoint: str) -> str:
+        return f"{self.base_url}/{endpoint.lstrip('/')}"
+
     def _get(
         self, endpoint: str, params: RequestParams | None = None
     ) -> dict[str, Any]:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+        url = self._full_url(endpoint)
         try:
             response = requests.get(
                 url, auth=self.auth, params=params, timeout=self.timeout
@@ -52,10 +55,12 @@ class RESTSteamServerAPI(ABC):
             response.raise_for_status()
             return response.json() if response.content else {}
         except requests.RequestException as e:
-            raise RuntimeError(f"GET {url} failed: {e}") from e
+            raise SteamAPIRequestError(f"GET {url} failed: {e}") from e
 
-    def _post(self, endpoint: str, json: JsonMapping | None = None) -> Any:
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+    def _post(
+        self, endpoint: str, json: JsonMapping | None = None
+    ) -> dict[str, Any] | None:
+        url = self._full_url(endpoint)
         try:
             response = requests.post(
                 url, auth=self.auth, json=json, timeout=self.timeout
@@ -63,11 +68,15 @@ class RESTSteamServerAPI(ABC):
             response.raise_for_status()
             return response.json() if response.content else None
         except requests.RequestException as e:
-            raise RuntimeError(f"POST {url} failed: {e}") from e
+            raise SteamAPIRequestError(f"POST {url} failed: {e}") from e
 
     # ------------------------
     # Abstract Server Methods
     # ------------------------
+    @abstractmethod
+    def _build_auth(self, auth_info: AuthInfo | None) -> Any:
+        pass
+
     @abstractmethod
     def health_check(self) -> bool:
         """Get server info (health check)"""

@@ -7,7 +7,7 @@ from server_runner.utils.managed_process import ManagedProcess
 log = get_logger()
 
 
-class SteamServerController:
+class SteamServerProcess:
     """
     Manages a single Steam game instance (App ID driven):
       - Starts, stops, and restarts the game process

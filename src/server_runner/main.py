@@ -5,7 +5,7 @@ import types
 
 from server_runner.commandline.commandline import CommandLine
 from server_runner.config.logging import get_logger, setup_logging
-from server_runner.steam.gsm_setup import create_game_server_manager
+from server_runner.steam.factory import build_game_server
 from server_runner.workflow.workflow_setup import create_workflow_engine
 
 setup_logging()
@@ -27,8 +27,8 @@ def main():
     command_line = CommandLine()
     config = command_line.parse_server_config()
 
-    gsm = create_game_server_manager(config)
-    engine = create_workflow_engine(gsm)
+    server = build_game_server(config)
+    engine = create_workflow_engine(server)
 
     engine.start()
     log.info("Workflow engine started")
@@ -44,7 +44,7 @@ def main():
     except Exception:
         log.exception("Error during main loop")
     finally:
-        gsm.stop()
+        server.stop()
         engine.stop()
         log.info("Cleanup operations complete. Exiting.")
 

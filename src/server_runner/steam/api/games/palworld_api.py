@@ -1,10 +1,12 @@
 from typing import Any
 
-import requests
 from requests.auth import HTTPBasicAuth
 
 from server_runner.steam.api.auth_info import AuthInfo
-from server_runner.steam.api.games.base_rest_api import RESTSteamServerAPI
+from server_runner.steam.api.games.base_rest_api import (
+    RESTSteamServerAPI,
+    SteamAPIRequestError,
+)
 
 
 class PalWorldAPI(RESTSteamServerAPI):
@@ -49,11 +51,11 @@ class PalWorldAPI(RESTSteamServerAPI):
     # ------------------------
     # Server Control
     # ------------------------
-    def health_cheack(self) -> bool:
+    def health_check(self) -> bool:
         try:
             self._get("/v1/api/info")
             return True
-        except RuntimeError:
+        except SteamAPIRequestError:
             return False
 
     def announce(self, message: str) -> None:

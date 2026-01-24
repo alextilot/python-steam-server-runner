@@ -13,8 +13,8 @@ def create_game_api(
 ) -> RESTSteamServerAPI:
 
     api_cls = API_REGISTRY.get(steam_app_id)
-    if api_cls is None:
-        raise ValueError(f"No API registered for App ID {steam_app_id.name}")
+    if not api_cls:
+        raise KeyError(f"No API registered for App ID {steam_app_id.name}")
 
     return api_cls(
         base_url=base_url,
