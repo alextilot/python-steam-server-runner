@@ -6,7 +6,8 @@ import types
 from server_runner.commandline.commandline import CommandLine
 from server_runner.config.logging import get_logger, setup_logging
 from server_runner.steam.factory import build_game_server
-from server_runner.workflow.workflow_setup import create_workflow_engine
+from server_runner.workflow.job_ids import JobID
+from server_runner.workflow.workflow_builder import create_workflow_engine
 
 setup_logging()
 log = get_logger()
@@ -32,7 +33,7 @@ def main():
 
     engine.start()
     log.info("Workflow engine started")
-    engine.enqueue_job("update_start")
+    engine.enqueue_job(JobID.UPDATE_START)
 
     try:
         while not shutdown_event.is_set():
