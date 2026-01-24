@@ -2,7 +2,7 @@ from collections.abc import Callable
 from enum import Enum, auto
 from typing import Literal, TypedDict
 
-from server_runner.steam.game_server_manager import GameServerManager
+from server_runner.steam.managed_game_server import ManagedGameServer, ServerState
 from server_runner.workflow.tasks import Task, TaskFactory
 
 
@@ -43,8 +43,8 @@ class JobDef(TypedDict):
 JobDefs = dict[JobID, JobDef]  # <-- use enum as key
 
 
-def get_job_definitions(gsm: GameServerManager) -> JobDefs:
-    tf = TaskFactory(gsm)
+def get_job_definitions(server: ManagedGameServer) -> JobDefs:
+    tf = TaskFactory(server)
 
     return {
         JobID.START: {
@@ -53,7 +53,7 @@ def get_job_definitions(gsm: GameServerManager) -> JobDefs:
             "schedule": {
                 "times": [":00"],
                 "interval": "minute",
-                "condition": lambda: gsm.state() != gsm.ServerState.RUNNING,
+                "condition": lambda: server.state() is not ServerState.RUNNING,
             },
         },
         JobID.UPDATE_START: {
@@ -64,40 +64,49 @@ def get_job_definitions(gsm: GameServerManager) -> JobDefs:
         JobID.RESTART: {
             "priority": 3,
             "tasks": [
-                lambda: tf.countdown("Restarting", 15),
+                # Countdown with custom checkpoints: 5 min, 1 min, 30s
+                lambda: tf.countdown(
+                    "Restarting", delay_minutes=15, checkpoints=[300, 60, 30]
+                ),
                 tf.stop,
                 tf.start,
             ],
             "schedule": {
                 "times": ["05:45"],
                 "interval": "day",
-                "condition": lambda: gsm.state() == gsm.ServerState.RUNNING,
+                "condition": lambda: server.state() is not ServerState.RUNNING,
             },
         },
         JobID.OOM: {
             "priority": 4,
             "tasks": [
-                lambda: tf.countdown("OOM detected", 5),
+                # Countdown with short, frequent checkpoints for quick OOM restart
+                lambda: tf.countdown(
+                    "OOM detected", delay_minutes=1, checkpoints=[60, 30, 15, 5]
+                ),
                 tf.stop,
                 tf.start,
             ],
             "schedule": {
                 "times": [":00", ":10", ":20", ":30", ":40", ":50"],
                 "interval": "hour",
-                "condition": lambda: gsm.is_out_of_memory(),
+                "condition": lambda: server.is_out_of_memory(),
             },
         },
         JobID.UPDATE: {
             "priority": 5,
             "tasks": [
-                lambda: tf.countdown("Update incoming", 15),
+                # Countdown with custom checkpoints: 15min, 5 min, 1 min, 30s
+                lambda: tf.countdown(
+                    "Update incoming", delay_minutes=15, checkpoints=[600, 300, 60, 30]
+                ),
                 tf.stop,
                 tf.update,
             ],
             "schedule": {
                 "times": [":00", ":15", ":30", ":45"],
                 "interval": "hour",
-                "condition": lambda: gsm.update_available(),
+                "condition": lambda: server.update_available(),
             },
         },
         JobID.STOP: {

@@ -21,8 +21,6 @@ class ServerState(Enum):
 
 
 class ManagedGameServer:
-    ServerState = ServerState
-    StopMode = StopMode
     """
     High-level interface for managing a game server instance,
     including process lifecycle and API interactions.

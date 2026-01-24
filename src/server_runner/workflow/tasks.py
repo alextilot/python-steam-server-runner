@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from server_runner.config.logging import get_logger
-from server_runner.steam.game_server_manager import GameServerManager, ServerState
+from server_runner.steam.managed_game_server import ManagedGameServer, ServerState
 
 log = get_logger()
 
@@ -17,8 +18,8 @@ class TaskResult:
 
 
 class Task(ABC):
-    def __init__(self, gsm: GameServerManager):
-        self.gsm: GameServerManager = gsm
+    def __init__(self, server: ManagedGameServer):
+        self.server: ManagedGameServer = server
 
     @abstractmethod
     def run(self) -> TaskResult:
@@ -27,82 +28,88 @@ class Task(ABC):
 
 class TaskStart(Task):
     def run(self) -> TaskResult:
-        if self.gsm.state() is ServerState.RUNNING:
+        if self.server.state() is ServerState.RUNNING:
             return TaskResult(True, "Server already running")
 
-        self.gsm.start()
+        self.server.start()
         return TaskResult(True, "Server started")
 
 
 class TaskStop(Task):
     def run(self) -> TaskResult:
-        if self.gsm.state() is ServerState.STOPPED:
+        if self.server.state() is ServerState.STOPPED:
             return TaskResult(True, "Server already stopped")
 
-        self.gsm.stop()
+        self.server.stop()
         return TaskResult(True, "Server stop requested")
 
 
 class TaskUpdate(Task):
     def run(self) -> TaskResult:
-        self.gsm.update()
+        self.server.update()
         return TaskResult(True, "Update complete")
 
 
 class TaskCountdown(Task):
     def __init__(
         self,
-        gsm: GameServerManager,
+        server: ManagedGameServer,
         title: str,
         delay_minutes: int = 0,
+        checkpoints: Sequence[int] | None = None,  # seconds
     ) -> None:
-        super().__init__(gsm)
+        super().__init__(server)
         self.title = title
         self.total_seconds = delay_minutes * SECONDS_IN_A_MINUTE
+        # Default checkpoints: 5min, 1min, 30s, 15s
+        self.checkpoints = sorted(checkpoints or [5 * 60, 60, 30, 15], reverse=True)
 
     def run(self) -> TaskResult:
         remaining = self.total_seconds
 
-        checkpoints = [5 * 60, 60, 30, 15]
-
-        for checkpoint in checkpoints:
-            if remaining <= checkpoint:
-                continue
-
-            self._announce(remaining)
-            self.gsm.wait.sleep(remaining - checkpoint)
-            remaining = checkpoint
-
         while remaining > 0:
-            self._announce(remaining)
-            self.gsm.wait.sleep(15)
-            remaining -= 15
+            # Announce if we are at or below a checkpoint
+            for cp in self.checkpoints:
+                if remaining <= cp:
+                    self._announce(remaining)
+                    self.checkpoints.remove(cp)
+                    break
+
+            # Sleep a small interval (max 15s) or remaining time
+            sleep_time = min(15, remaining)
+            self.server.wait.sleep(sleep_time)
+            remaining -= sleep_time
 
         return TaskResult(True, "Countdown completed")
 
     def _announce(self, seconds: int) -> None:
         if seconds >= SECONDS_IN_A_MINUTE:
             value = seconds // SECONDS_IN_A_MINUTE
-            unit = "minutes"
+            unit = "minutes" if value > 1 else "minute"
         else:
             value = seconds
-            unit = "seconds"
+            unit = "seconds" if value > 1 else "second"
 
-        self.gsm.announce(f"[{self.title}] restarting in {value} {unit}")
+        self.server.announce(f"[{self.title}] restarting in {value} {unit}")
 
 
 class TaskFactory:
-    def __init__(self, gsm: GameServerManager) -> None:
-        self.gsm = gsm
+    def __init__(self, server: ManagedGameServer) -> None:
+        self.server = server
 
     def start(self) -> TaskStart:
-        return TaskStart(self.gsm)
+        return TaskStart(self.server)
 
     def stop(self) -> TaskStop:
-        return TaskStop(self.gsm)
+        return TaskStop(self.server)
 
     def update(self) -> TaskUpdate:
-        return TaskUpdate(self.gsm)
+        return TaskUpdate(self.server)
 
-    def countdown(self, title: str, minute_delay: int = 0) -> TaskCountdown:
-        return TaskCountdown(self.gsm, title, minute_delay)
+    def countdown(
+        self,
+        title: str,
+        delay_minutes: int = 0,
+        checkpoints: Sequence[int] | None = None,
+    ) -> TaskCountdown:
+        return TaskCountdown(self.server, title, delay_minutes, checkpoints)
