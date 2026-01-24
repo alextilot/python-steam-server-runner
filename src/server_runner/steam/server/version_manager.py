@@ -12,7 +12,7 @@ from server_runner.steam.server.steamcmd_schema import make_steamcmd_schema
 
 log = get_logger()
 
-STEAMCMD_PATH = "/usr/bin/steamcmd"
+STEAMCMD_PATH = "steamcmd"
 
 
 class SteamServerVersionManager:
