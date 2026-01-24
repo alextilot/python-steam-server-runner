@@ -12,7 +12,7 @@ from server_runner.steam.server.steamcmd_schema import make_steamcmd_schema
 
 log = get_logger()
 
-STEAMCMD_PATH = "/usr/bin/steamcmd"
+STEAMCMD_PATH = "steamcmd"
 
 
 class SteamServerVersionManager:
@@ -60,7 +60,7 @@ class SteamServerVersionManager:
             response.raise_for_status()
             data = response.json()
             validate(instance=data, schema=self.steamcmd_schema)
-            buildid = data["data"][self.app_id]["depots"]["branches"]["public"][
+            buildid = data["data"][str(self.app_id)]["depots"]["branches"]["public"][
                 "buildid"
             ]
             latest_version = int(buildid)
