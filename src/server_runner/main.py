@@ -1,6 +1,5 @@
 import signal
 import threading
-import time
 import types
 
 from server_runner.commandline.commandline import CommandLine
@@ -33,17 +32,17 @@ def main():
 
     engine.start()
     log.info("Workflow engine started")
+
+    # Enqueue an initial job
     engine.enqueue_job(JobID.UPDATE_START)
 
     try:
+        # Use wait() to respond immediately to shutdown_event
         while not shutdown_event.is_set():
-            time.sleep(1)
-    except KeyboardInterrupt:
-        # Catch explicit Ctrl+C if it wasn't caught by the handler
-        log.warning("KeyboardInterrupt caught directly. Shutting down.")
-        shutdown_event.set()
+            shutdown_event.wait(timeout=1)
     except Exception:
         log.exception("Error during main loop")
+        exit(1)
     finally:
         server.stop()
         engine.stop()
